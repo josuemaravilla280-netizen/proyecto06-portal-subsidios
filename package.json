@@ -19,6 +19,7 @@
   "homepage": "https://github.com/josuemaravilla280-netizen/proyecto06-portal-subsidios#readme",
   "dependencies": {
     "express": "^5.3.0",
-    "express-session": "^1.19.0"
+    "express-session": "^1.19.0",
+    "jose": "^6.2.12"
   }
 }
