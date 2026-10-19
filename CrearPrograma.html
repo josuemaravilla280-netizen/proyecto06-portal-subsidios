@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar NUEVOS PROGRAMAS</title>
+  <link rel="stylesheet" href="EstiloFormCrearPrograma.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="container">
+    <form id="cosechaForm">
+      <header class="form-header">
+        <div>
+          <h1>NUEVO BENEFICIO</h1>
+          <p class="subtitle">PRG-AGR-02 · cambios sin guardar</p>
+        </div>
+        <span class="status">Activo</span>
+      </header>
+
+      <section class="form-grid">
+        <div class="field">
+          <label for="nombre">Nombre del programa *</label>
+          <input id="nombre" name="nombre"
+                 value="Cosecha Activa" required>
+        </div>
+
+        <div class="field">
+          <label for="entidad">Entidad responsable *</label>
+          <select id="entidad" name="entidad" required>
+            <option value="raiz">Raíz Cooperativa · EMP-02</option>
+            <option value="agricultura">Ministerio de Agricultura y Ganadería (MAG)</option>
+            <option value="integracion">Dirección de Integración</option>
+            <option value="cooperativa">Fundación Salvadoreña de Desarrollo y Vivienda Mínima (FUNDASAL).</option>
+            <option value="integracion">Fundación Salvadoreña para la Salud y el Desarrollo Humano (FUSAL)</option>
+            
+          
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="tipo">Tipo de beneficio *</label>
+          <select id="tipo" name="tipo" required>
+            <option>Insumos agrícolas</option>
+            <option>Becas</option>
+            <option>Apoyo para vivienda</option>
+            <option>Recursos humanitarios</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="estado">Estado *</label>
+          <select id="estado" name="estado" required>
+            <option>Activo</option>
+            <option>En revisión</option>
+            <option>Suspendido</option>
+            <option>Cerrado</option>
+          </select>
+        </div>
+
+        <div class="field full">
+          <label for="descripcion">Descripción del beneficio *</label>
+          <input id="descripcion" name="descripcion"
+                 placeholder="Escriba una descripcion sobre el beneficio."
+                 required>
+        </div>
+
+        <div class="field">
+          <label for="cantidad">Cantidad por asignación *</label>
+          <input id="cantidad" name="cantidad" type="number"
+                 min="1" placeholder="Cantidad por asignación" required>
+        </div>
+
+        <div class="field">
+          <label for="unidad">Unidad de entrega *</label>
+          <select id="unidad" name="unidad" required>
+            <option>Paquete / kit</option>
+            <option>Unidad</option>
+            <option>Saco</option>
+            <option>Litro</option>
+            <option>Libras</option>
+            <option>Metros</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="cupos">Cupos del período *</label>
+          <input id="cupos" name="cupos" type="number"
+                 min="1" placeholder="250" required>
+        </div>
+
+
+    <!-- Campo de Clave Correlativa Automatizada -->
+    <div>
+        <label >
+            Clave correlativa *
+        </label>
+        <input 
+            type="text" 
+            id="claveCorrelativa"
+            placeholder="PRG-AGR-02-001" 
+            readonly
+        />
+    </div>
+
+    <div style="flex: 1;"></div>
+</div>
+
+    <div style="flex: 1;"></div>
+</div>
+
+
+    
+    <div style="flex: 1;"></div>
+</div>
+
+        <div class="field full">
+          <label for="composicion">Composición del paquete *</label>
+          <input id="composicion" name="composicion"
+                 placeholder="Describa el contenido del beneficio."
+                 required>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Período y cobertura</h2>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="fechaInicio">Fecha de inicio *</label>
+            <input id="fechaInicio" name="fechaInicio"
+                   type="date" placeholder="2026-09-01" required>
+          </div>
+
+          <div class="field">
+            <label for="fechaCierre">Fecha de cierre *</label>
+            <input id="fechaCierre" name="fechaCierre"
+                   type="date" placeholder="2026-10-31" required>
+          </div>
+
+          <div class="field">
+            <label for="periodo">Período de asignación *</label>
+            <input id="periodo" name="periodo"
+                   placeholder="Campaña 2026" required>
+          </div>
+
+          <div class="field">
+            <label for="periodicidad">Periodicidad *</label>
+            <select id="periodicidad" name="periodicidad" required>
+              <option>Una vez por campaña</option>
+              <option>Mensual</option>
+              <option>Trimestral</option>
+              <option>Anual</option>
+            </select>
+          </div>
+
+          <div class="field full">
+            <label for="zonas">Zonas habilitadas *</label>
+            <select id="zonas" name="zonas" required>
+              <option>San Salvador</option>
+              <option>Santa Ana</option>
+              <option>Chalatenango</option>
+              <option>Ahuachapán</option>
+              <option>Sonsonate</option>
+              <option>Cabañas</option>
+              <option>La Paz</option>
+              <option>Cuscatlán</option>
+              <option>San Vicente</option>
+              <option>Morazán</option>
+              <option>San Miguel</option>
+              <option>La Unión</option>
+              <option>La Libertad</option>
+              <option>Usulután</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="section eligibility">
+        <h2>Criterios de elegibilidad</h2>
+
+        <label class="check">
+          <input type="checkbox" name="criterios"
+                 value="unidad" checked>
+          <span>Unidad productiva registrada y validada</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="criterios"
+                 value="residencia" checked>
+          <span>Residencia o actividad en una zona habilitada</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="criterios"
+                 value="declaracion" checked>
+          <span>Declaración de pequeña producción documentada</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" name="criterios"
+                 value="consentimiento" checked>
+          <span>Consentimiento para tratamiento de datos vigente</span>
+        </label>
+
+        <div class="field documents">
+          <label for="documentos">Documentos requeridos *</label>
+          <input id="documentos" name="documentos"
+                 placeholder="Identificación genérica, declaración productiva y residencia."
+                 required>
+        </div>
+      </section>
+
+      <div class="notice">
+        <span class="info-icon">i</span>
+        <p>
+          Control de duplicados: una asignación por beneficiario,
+          programa y campaña. 80 cupos disponibles; no se utilizan
+          presupuestos monetarios.
+        </p>
+      </div>
+
+      <footer class="actions">
+        <button class="btn btn-primary" type="submit">
+          Guardar cambios
+        </button>
+        <button class="btn btn-secondary" id="cancelar"
+                type="button">
+          Cancelar
+        </button>
+        <button class="btn btn-secondary" id="cerrar"
+                type="button">
+          Cerrar programa
+        </button>
+      </footer>
+
+      <p id="mensaje" class="message" role="status"
+         aria-live="polite"></p>
+    </form>
+  </main>
+</body>
+</html>
