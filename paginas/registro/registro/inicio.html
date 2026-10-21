@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión</title>
+    <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+    <div class="contenedor-inicio">
+        <h1>Inicio de sesión</h1>
+        <p class="subtitulo">Ingresa la contraseña de tu cuenta para continuar.</p>
+
+        <form id="inicioForm">
+            <div class="input-verificacion">
+                <label for="identificador">DUI o número de pasaporte</label>
+                <input type="text" id="identificador" placeholder="01234567-8"required>
+            </div>
+
+            <div class="input-verificacion">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" placeholder="••••••••••••"required>
+            </div>
+
+            <button type="submit" class="btn-continuar">Continuar</button>
+        </form>
+        <div id="mensaje-respuesta" class="mensaje"></div>
+    </div>
+
+    <footer>
+        <a href="#">Privacidad y tratamiento de datos</a>
+        <a href="#">Condiciones de uso</a>
+    </footer>
+    <script src="inicioSesion.js"></script>
+
+</body>
+</html>
