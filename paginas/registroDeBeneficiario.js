@@ -1,8 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    // =========================================================================
     // 1. CAPTURA DE ELEMENTOS DEL DOM (Basado en tu HTML exacto)
-    // =========================================================================
     const formularioRegistro = document.getElementById("registroForm");
     const campoDui = document.getElementById("documento_identidad");
     const campoNombre = document.getElementById("nombre_completo");
@@ -14,9 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const botonCerrarSesion = document.querySelector(".btn-cierre");
 
 
-    // =========================================================================
     // 2. FUNCIONALIDAD DEL BOTÓN CERRAR SESIÓN
-    // =========================================================================
+
     if (botonCerrarSesion) {
         botonCerrarSesion.addEventListener("click", () => {
             // Limpiar datos temporales guardados de la sesión
@@ -26,15 +23,14 @@ document.addEventListener("DOMContentLoaded", () => {
             // Mostrar mensaje breve y redirigir al inicio de sesión (ajusta 'index.html' si tu login se llama diferente)
             mostrarMensaje("Cerrando sesión...", "exito");
             setTimeout(() => {
-                window.location.href = "inicio.html"; 
+                window.location.href = "inicioSesion.html"; 
             }, 800);
         });
     }
 
 
-    // =========================================================================
+
     // 3. ADVERTENCIAS Y VALIDACIONES EN TIEMPO REAL
-    // =========================================================================
 
     // A) CAMPO NOMBRE COMPLETO: Advierte si intenta escribir números o símbolos
     campoNombre.addEventListener("input", (e) => {
@@ -92,9 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
-    // =========================================================================
+    
     // 4. ENVÍO DEL FORMULARIO Y VALIDACIÓN FINAL
-    // =========================================================================
     formularioRegistro.addEventListener("submit", (e) => {
         e.preventDefault();
 
@@ -121,9 +116,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 
-    // =========================================================================
+
     // 5. FUNCIONES AUXILIARES PARA MENSAJES
-    // =========================================================================
     function mostrarMensaje(texto, tipo) {
         if (!contenedorMensaje) return;
 
