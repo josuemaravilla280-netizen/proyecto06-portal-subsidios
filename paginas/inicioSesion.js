@@ -1,70 +1,68 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    /// OBTENER ELEMENTOS HTML ATRAVEZ DE DOM
+    /// OBTENER ELEMENTOS HTML A TRAVÉS DEL DOM
     const btnTogglePassword = document.getElementById("btnTogglePassword");
-const campoMostrar = document.getElementById("password");
+    const campoMostrar = document.getElementById("password");
 
     const formularioInicio = document.getElementById("inicioForm");
     const campoIdentificador = document.getElementById("identificador");
     const campoPassword = document.getElementById("password");
     const contenedorMensaje = document.getElementById("mensaje-respuesta");
-      ///HACEMOS QUE EL USUARIO NO PUEDA ESCRIBIR LETRAS U OTROS CARECTERES QUE NO SEA -. 
-    campoIdentificador.addEventListener("input", (evento) => {
-        let valor = evento.target.value;
 
-        // ELIMINA CUALQUIER CARACTER QUE NO SEA UN NUMERO O UN GUION(-)
-        valor = valor.replace(/[^0-9-]/g, "");
+    /// VALIDACIÓN EN TIEMPO REAL PARA EL DUI / IDENTIFICADOR
+    campoIdentificador.addEventListener("input", (e) => {
+        const valorOriginal = e.target.value;
+        // Solo permite números (0-9) y guiones (-)
+        let valorLimpio = valorOriginal.replace(/[^0-9-]/g, "");
 
-        // LIMITA LA LONGITUD MAXIMA A 10 CARACTERES (ej: 01234567-8)
-        if (valor.length > 10) {
-            valor = valor.slice(0, 10);
+        // Limita la longitud máxima a 10 caracteres (puedes ajustarlo si tu DUI usa otro formato)
+        if (valorLimpio.length > 10) {
+            valorLimpio = valorLimpio.slice(0, 10);
         }
 
-        // DEVUELVE EL VALOR LIMPIO AL INPUT 
-        evento.target.value = valor;
+        if (valorOriginal !== valorLimpio) {
+            e.target.value = valorLimpio;
+            mostrarMensaje("⚠️ El documento solo admite números y guion (-).", "error");
+        } else {
+            e.target.value = valorLimpio;
+            // Si el usuario borra lo malo o escribe bien, limpiamos el mensaje de error del DUI
+            if (contenedorMensaje && contenedorMensaje.textContent.includes("admite números")) {
+                contenedorMensaje.textContent = "";
+            }
+        }
     });
 
-
-/// VALIDACIÓN EN TIEMPO REAL PARA LA CONTRASEÑA (Sin espacios en blanco)
-
+    /// VALIDACIÓN EN TIEMPO REAL PARA LA CONTRASEÑA (Sin espacios en blanco)
     campoPassword.addEventListener("input", (evento) => {
-        // Elimina automáticamente cualquier espacio en blanco que el usuario intente escribir
         evento.target.value = evento.target.value.replace(/\s/g, "");
     });
     
     // --- LÓGICA PARA MOSTRAR / OCULTAR CONTRASEÑA ---
+    if (btnTogglePassword && campoMostrar) {
+        btnTogglePassword.addEventListener("click", () => {
+            const esPassword = campoMostrar.type === "password";
+            campoMostrar.type = esPassword ? "text" : "password";
+            btnTogglePassword.textContent = esPassword ? "🙈" : "👁️";
+        });
+    }
 
-if (btnTogglePassword && campoMostrar) {
-    btnTogglePassword.addEventListener("click", () => {
-        // Verifica si el tipo actual es 'password'
-        const esPassword = campoMostrar.type === "password";
-        
-        // Si es 'password' lo cambia a 'text' (muestra), si no, lo regresa a 'password' (oculta)
-        campoMostrar.type = esPassword ? "text" : "password";
-        
-        // Cambia el icono del botón dinámicamente
-        btnTogglePassword.textContent = esPassword ? "🙈" : "👁️";
-    });
-}
-    /// ESCUCHAR EVENTOS 
+    /// ESCUCHAR EVENTO DE ENVÍO DEL FORMULARIO 
     formularioInicio.addEventListener("submit", (evento) => {
-        /// EVITA QUE LA PAGINA SE RECARGUE AUTOMATICAMENTE DESPUES DE ENVIAR EL FORMULARIO 
         evento.preventDefault();
-       /// LIMPIAMOS EL CONTENEDOR DE MENSAJES
+        
         if (contenedorMensaje) {
             contenedorMensaje.textContent = "";
             contenedorMensaje.className = "mensaje";
         }
-        /// LEER EL TEXTO INGRESADO Y ELIMINAMOS LOS ESPACION EN BLANCO
+
         const identificador = campoIdentificador.value.trim();
         const password = campoPassword.value.trim();
-         //// VALIDAMOS QUE LOS CAMPOS TENGAN INFORMACION
+
         if (!identificador || !password) {
             mostrarMensaje("Por favor, completa todos los campos requeridos.", "error");
             return;
         }
 
-        // NUEVA VALIDACIÓN: MINIMO 8 CARAECTERES PARA LA CONTRASEÑA
         if (password.length < 8) {
             mostrarMensaje("La contraseña debe tener al menos 8 caracteres.", "error");
             return;
@@ -73,11 +71,9 @@ if (btnTogglePassword && campoMostrar) {
         // SIMULACIÓN LOCAL PARA EL SPRINT 1 ---
         mostrarMensaje("¡Inicio de sesión exitoso!", "exito");
 
-        // Guardar datos de prueba en el navegador
         localStorage.setItem("tokenAcceso", "token-de-prueba-12345");
         localStorage.setItem("rolUsuario", "ADMINISTRADOR");
 
-        // REDIRIGIR AL FORMULARIO  DE RESGISTRO DESPUES DE  1.5 SEGUNDOS
         setTimeout(() => {
             window.location.href = "registro.html"; 
         }, 1500);
@@ -89,9 +85,9 @@ if (btnTogglePassword && campoMostrar) {
         contenedorMensaje.textContent = texto;
         
         if (tipo === "exito") {
-            contenedorMensaje.style.color = "#22c55e"; // Verde para éxito
+            contenedorMensaje.style.color = "#22c55e"; // Verde
         } else {
-            contenedorMensaje.style.color = "#ef4444"; // Rojo para error
+            contenedorMensaje.style.color = "#ef4444"; // Rojo
         }
     }
 });
