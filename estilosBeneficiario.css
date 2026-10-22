@@ -1,0 +1,263 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #232931; /* Fondo oscuro principal */
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* BARRA DE NAVEGACIÓN SUPERIOR */
+.navegacion {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 40px;
+    border-bottom: 1px solid #333c48;
+}
+
+.programas {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.usuario-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 13px;
+    color: #a0aec0;
+}
+
+.btn-cierre {
+    background: transparent;
+    border: 1px solid #4a5568;
+    color: #cbd5e1;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.btn-cierre:hover {
+    background-color: #3a4454;
+    color: #ffffff;
+}
+
+/* CONTENEDOR PRINCIPAL (PANEL LATERAL + FORMULARIO) */
+.contenedor-principal {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 40px;
+    padding: 40px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    flex: 1;
+}
+
+/* PANEL INFORMATIVO LATERAL (ESTILO FIGMA) */
+.panel-informativo {
+    background-color: #313a46; /* Tarjeta ligeramente más clara */
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.etiqueta-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0aec0;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.titulo-panel {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    color: #ffffff;
+}
+
+.descripcion-panel {
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.5;
+    margin-bottom: 28px;
+}
+
+.lista-caracteristicas {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 28px;
+}
+
+.item-caracteristica {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.icono-item {
+    background-color: rgba(255, 255, 255, 0.08);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.texto-item h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+
+.texto-item p {
+    font-size: 12px;
+    color: #a0aec0;
+    line-height: 1.4;
+}
+
+.nota-ejemplo {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 16px;
+}
+
+.nota-ejemplo h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #a0aec0;
+    margin-bottom: 4px;
+}
+
+.nota-ejemplo p {
+    font-size: 11px;
+    color: #718096;
+    line-height: 1.3;
+}
+
+/* SECCIÓN DEL FORMULARIO DE REGISTRO */
+.contenedor-formulario {
+    width: 100%;
+    max-width: 520px;
+}
+
+.registro h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.subtitulo {
+    font-size: 13px;
+    color: #a0aec0;
+    margin-bottom: 24px;
+}
+
+.formulario {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-entrada {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: #e2e8f0;
+}
+
+input {
+    width: 100%;
+    padding: 12px 14px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1a202c;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+input:focus {
+    border-color: #3182ce;
+}
+
+.accion {
+    margin-top: 24px;
+}
+
+.btn-guardar {
+    width: 100%;
+    padding: 12px;
+    background-color: #3b4454;
+    color: #ffffff;
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-guardar:hover {
+    background-color: #4a5568;
+}
+
+.mensaje {
+    margin-top: 16px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* PIE DE PÁGINA */
+footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 24px;
+    font-size: 12px;
+    color: #a0aec0;
+    border-top: 1px solid #333c48;
+    padding: 20px 40px;
+}
+
+
+/* RESPONSIVO PARA PANTALLAS PEQUEÑAS / MÓVILES */
+@media (max-width: 900px) {
+    .contenedor-principal {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .panel-informativo,
+    .contenedor-formulario {
+        max-width: 100%;
+    }
+}
