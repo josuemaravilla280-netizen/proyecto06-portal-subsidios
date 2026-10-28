@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beneficiario - Portal de Subsidios</title>
+  <link rel="stylesheet" href="../css/estilos.css"><link rel="stylesheet" href="../css/dashboard.css">
+</head>
+<body>
+  <main class="panel-app">
+    <header class="barra-app"><div><span class="tag-portal">PORTAL MULTIEMPRESA</span><h1>Beneficiario</h1><p id="datosUsuario"></p></div><button id="btnCerrar" class="btn-secundario">Cerrar ventana</button></header>
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+
+    <section class="vista-panel" style="margin-top:18px">
+      <h2>Perfil</h2>
+      <div class="perfil">
+        <img id="imgDocumento" class="perfil-img" alt="Documento de identidad">
+        <ul class="perfil-datos">
+          <li><span>Nombre</span><b id="pNombre"></b></li>
+          <li><span>Departamento y municipio</span><b id="pUbicacion"></b></li>
+          <li><span>Dirección</span><b id="pDireccion"></b></li>
+          <li><span>Edad</span><b id="pEdad"></b></li>
+          <li><span>Número de documento</span><b id="pDocumento"></b></li>
+          <li><span>Número de pasaporte</span><b id="pPasaporte"></b></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="vista-panel">
+      <h2>Programas</h2>
+      <div class="tabla-contenedor">
+        <table>
+          <thead><tr><th>Programa</th><th>Estado</th><th>Última entrega</th><th>Acción</th></tr></thead>
+          <tbody id="tbodyProgramas"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="vista-panel">
+      <h2>Documentos</h2>
+      <ul id="listaDocumentos" class="lista-docs"></ul>
+    </section>
+  </main>
+  <footer><span>Subsidios · ayudas</span><div class="links-footer"><a href="#">Privacidad y tratamiento de datos</a><a href="#">Condiciones de uso</a></div></footer>
+  <script src="../js/dashboards/beneficiario.js" defer></script>
+</body>
+</html>
