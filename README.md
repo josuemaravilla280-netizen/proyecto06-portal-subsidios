@@ -7,18 +7,12 @@ Incluye HU01–HU08: inicio de sesión, roles y permisos, registro/validación/a
 - Node.js LTS instalado
 - Git instalado (opcional para ejecutar, necesario para publicar en GitHub)
 
-## Instalación en Windows / PowerShell
+## Instalación en Windows / PowerShell / linux
 1. Copiar la URL de GitHub, abrir una nueva terminal, colocar el comando git - clone y pegar la URL.
 2. En Terminal > Nueva terminal, ejecute `npm install`.
 3. Ejecute `npm run dev`.
 4. Abra `http://localhost:3000`.
 
-## Instalación en linux
-1. Copiar la URL de GitHub, abrir una nueva terminal, colocar el comando git - clone y pegar la URL.
-2. En Terminal > Nueva terminal, ejecute `npm install`.
-3. ejecute `npm install-scripts approve bcrypt@5.1.1`
-4. Ejecute `npm run dev`.
-5. Abra `http://localhost:3000`.
 
 ## Cuentas de demostración
 Las cuentas se crean automáticamente al iniciar el servidor. Use el identificador indicado y la contraseña temporal:
