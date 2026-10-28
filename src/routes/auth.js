@@ -1,40 +1,31 @@
 const express = require('express');
-const { beneficiarios, nuevoIdBeneficiario } = require('../data/memoria');
-const { permitir } = require('../middleware/auth');
+const bcrypt = require('bcrypt');
+const { usuarios } = require('../data/memoria');
 const router = express.Router();
-const operador = permitir('administrador', 'operador');
-function limpiar(body) {
-  return {
-    nombre: String(body.nombre || '').trim(),
-    apellido: String(body.apellido || '').trim(),
-    identificador: String(body.identificador || '').trim(),
-    telefono: String(body.telefono || '').trim(),
-    correo: String(body.correo || '').trim(),
-    direccion: String(body.direccion || '').trim(),
-    municipio: String(body.municipio || '').trim(),
-    departamento: String(body.departamento || '').trim()
-  };
-}
-function validar(d) {
-  if (!d.nombre || !d.apellido || !d.identificador || !d.telefono || !d.direccion || !d.municipio || !d.departamento) return 'Complete todos los campos obligatorios.';
-  if (d.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.correo)) return 'El correo electrónico no tiene un formato válido.';
-  return null;
-}
-router.get('/', operador, (req, res) => res.json({ ok: true, datos: beneficiarios }));
-router.post('/', operador, (req, res) => {
-  const datos = limpiar(req.body); const error = validar(datos);
-  if (error) return res.status(400).json({ ok: false, mensaje: error });
-  if (beneficiarios.some(b => b.identificador.toLowerCase() === datos.identificador.toLowerCase())) return res.status(409).json({ ok: false, mensaje: 'Ya existe un beneficiario con ese DUI o pasaporte.' });
-  const nuevo = { id: nuevoIdBeneficiario(), ...datos, creadoEn: new Date().toISOString() };
-  beneficiarios.push(nuevo); res.status(201).json({ ok: true, dato: nuevo, mensaje: 'Beneficiario registrado.' });
+
+router.post('/login', async (req, res, next) => {
+  try {
+    const identificador = String(req.body.identificador || '').trim();
+    const password = String(req.body.password || '');
+    if (!identificador || !password) return res.status(400).json({ ok: false, mensaje: 'Escriba su DUI o pasaporte y contraseña.' });
+    const usuario = usuarios.find(u => u.identificador === identificador);
+    if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) return res.status(401).json({ ok: false, mensaje: 'Credenciales incorrectas.' });
+    req.session.regenerate(err => {
+      if (err) return next(err);
+      req.session.usuario = { id: usuario.id, nombre: usuario.nombre, identificador: usuario.identificador, rol: usuario.rol };
+      res.json({ ok: true, usuario: req.session.usuario, mensaje: 'Sesión iniciada correctamente.' });
+    });
+  } catch (error) { next(error); }
 });
-router.put('/:id', operador, (req, res) => {
-  const id = Number(req.params.id); const actual = beneficiarios.find(b => b.id === id);
-  if (!actual) return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
-  const datos = limpiar(req.body); const error = validar(datos);
-  if (error) return res.status(400).json({ ok: false, mensaje: error });
-  if (beneficiarios.some(b => b.id !== id && b.identificador.toLowerCase() === datos.identificador.toLowerCase())) return res.status(409).json({ ok: false, mensaje: 'Ese documento ya pertenece a otro beneficiario.' });
-  Object.assign(actual, datos, { actualizadoEn: new Date().toISOString() });
-  res.json({ ok: true, dato: actual, mensaje: 'Información actualizada.' });
+router.get('/me', (req, res) => {
+  if (!req.session.usuario) return res.status(401).json({ ok: false, mensaje: 'No hay una sesión activa.' });
+  res.json({ ok: true, usuario: req.session.usuario });
+});
+router.post('/logout', (req, res, next) => {
+  req.session.destroy(err => {
+    if (err) return next(err);
+    res.clearCookie('sid', { httpOnly: true, sameSite: 'lax' });
+    res.json({ ok: true, mensaje: 'Sesión cerrada.' });
+  });
 });
 module.exports = router;
