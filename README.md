@@ -31,7 +31,7 @@ Cambie estas credenciales si va a compartir el entorno. Son cuentas únicamente 
 ## Ramas
 - `main`: versión estable
 - `develop`: integración del Sprint
-- `feature/HU01-login`, `feature/HU02-roles-permisos`, `feature/HU03-registrar-beneficiario`, `feature/HU04-validar-documento`, `feature/HU05-actualizar-beneficiario`, `feature/HU06-crear-programa`, `feature/HU07-editar-programa`, `feature/HU08-eliminar-programa
+- `feature/HU01-login`, `feature/HU02-roles-permisos`, `feature/HU03-registrar-beneficiario`, `feature/HU04-validar-documento`, `feature/HU05-actualizar-beneficiario`, `feature/HU06-crear-programa`, `feature/HU07-editar-programa`, `feature/HU08-eliminar-programa`
 OBSERVACIÓN: La división de las ramas se trabajará hasta el sprint 2 y 3.
 
 Cada historia se trabaja en su rama y se integra a `develop` mediante Pull Request revisado.
