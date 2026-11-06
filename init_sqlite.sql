@@ -31,14 +31,14 @@ CREATE TABLE estados_incripciones_ec (
 );
 
 CREATE TABLE personas_ed (
-    id                      INTEGER PRIMARY KEY AUTOINCREMENT,
-    dui                     TEXT UNIQUE CHECK (length(dui) = 9 AND dui NOT GLOB '*[^0-9]*'),
-    pasaporte               TEXT UNIQUE,
+    documento_unico         TEXT NOT NULL PRIMARY KEY
+        CHECK (length(documento_unico) BETWEEN 1 AND 9 AND documento_unico NOT GLOB '*[^A-Z0-9]*'),
+    is_dui                  INTEGER NOT NULL CHECK (is_dui IN (0, 1)),
+
     nombre                  VARCHAR(250) NOT NULL CHECK (length(nombre) <= 250),
     apellido                VARCHAR(250) NOT NULL CHECK (length(apellido) <= 250),
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
     nacimiento              TEXT NOT NULL CHECK (date(nacimiento) = nacimiento),
-    CONSTRAINT documento_requerido CHECK (dui IS NOT NULL OR pasaporte IS NOT NULL)
 );
 
 CREATE TABLE empresas_ed (
@@ -75,7 +75,7 @@ CREATE TABLE cuentas_beneficiarios_ed (
               substr('89ab', abs(random()) % 4 + 1, 1) ||
               substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))
     ),
-    persona_documento INTEGER NOT NULL REFERENCES personas_ed(id),
+    persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id),
     datos             TEXT CHECK (json_valid(datos))
 );
@@ -87,7 +87,7 @@ CREATE TABLE cuentas_staff_ed (
               substr('89ab', abs(random()) % 4 + 1, 1) ||
               substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))
     ),
-    persona_documento INTEGER NOT NULL REFERENCES personas_ed(id),
+    persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     rol               INTEGER NOT NULL REFERENCES roles_ec(id),
     empresa           INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)

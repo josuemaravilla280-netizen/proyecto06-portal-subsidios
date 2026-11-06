@@ -30,14 +30,13 @@ CREATE TABLE estados_incripciones_ec (
 );
 
 CREATE TABLE personas_ed (
-    id                      SERIAL PRIMARY KEY,
-    dui                     TEXT UNIQUE CHECK (dui ~ '^[0-9]{9}$'),
-    pasaporte               TEXT UNIQUE,
+    documento_unico         TEXT PRIMARY KEY CHECK (documento_unico ~ '^[A-Z0-9]{1,9}$'),
+    is_dui                  BOOLEAN NOT NULL,
+
     nombre                  VARCHAR(250) NOT NULL,
     apellido                VARCHAR(250) NOT NULL,
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
-    nacimiento              DATE NOT NULL,
-    CONSTRAINT documento_requerido CHECK (dui IS NOT NULL OR pasaporte IS NOT NULL)
+    nacimiento              DATE NOT NULL
 );
 
 CREATE TABLE empresas_ed (
@@ -69,14 +68,14 @@ CREATE TABLE programas_departamentos_ep (
 
 CREATE TABLE cuentas_beneficiarios_ed (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    persona_documento INTEGER NOT NULL REFERENCES personas_ed(id),
+    persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     estado          INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id),
     datos           JSONB
 );
 
 CREATE TABLE cuentas_staff_ed (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    persona_documento INTEGER NOT NULL REFERENCES personas_ed(id),
+    persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico)
     rol               INTEGER NOT NULL REFERENCES roles_ec(id),
     empresa           INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)
