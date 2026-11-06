@@ -14,6 +14,11 @@ CREATE TABLE perioricidad_ec (
     name VARCHAR(20) NOT NULL
 );
 
+CREATE TABLE tipos_beneficios_ec (
+    id   SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL
+);
+
 CREATE TABLE estados_programa_ec (
     id   SERIAL PRIMARY KEY,
     name VARCHAR(22) NOT NULL
@@ -51,10 +56,10 @@ CREATE TABLE programas_ed (
     nombre                       VARCHAR(250) NOT NULL,
     entidad_responsable          INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado                       INTEGER NOT NULL REFERENCES estados_programa_ec(id),
-    tipo_beneficio               TEXT,
+    tipo_beneficio               INTEGER NOT NULL REFERENCES tipos_beneficios_ec(id),
     descripcion_beneficio        TEXT,
-    inicio                       DATE,
-    "final"                      DATE,
+    fecha_inicio                 DATE,
+    fecha_final                  DATE,
     documentos_registro_requiere TEXT,
     perioricidad                 INTEGER NOT NULL REFERENCES perioricidad_ec(id),
     datos                        JSONB

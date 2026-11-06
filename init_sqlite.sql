@@ -15,6 +15,11 @@ CREATE TABLE perioricidad_ec (
     name TEXT NOT NULL CHECK (length(name) <= 20)
 );
 
+CREATE TABLE tipos_beneficios_ec (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL CHECK (length(name) <= 50)
+);
+
 CREATE TABLE estados_programa_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK (length(name) <= 22)
@@ -53,10 +58,10 @@ CREATE TABLE programas_ed (
     nombre                       TEXT NOT NULL CHECK (length(nombre) <= 250),
     entidad_responsable          INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado                       INTEGER NOT NULL REFERENCES estados_programa_ec(id),
-    tipo_beneficio               TEXT,
+    tipo_beneficio               INTEGER NOT NULL REFERENCES tipos_beneficios_ec(id),
     descripcion_beneficio        TEXT,
-    inicio                       TEXT CHECK (date(inicio) = inicio),
-    "final"                      TEXT CHECK (date("final") = "final"),
+    fecha_inicio                       TEXT CHECK (date(fecha_inicio) = fecha_inicio),
+    fecha_final                        TEXT CHECK (date(fecha_final) = fecha_final),
     documentos_registro_requiere TEXT,
     perioricidad                 INTEGER NOT NULL REFERENCES perioricidad_ec(id),
     datos                        TEXT CHECK (json_valid(datos))
