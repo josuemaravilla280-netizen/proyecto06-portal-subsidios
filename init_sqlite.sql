@@ -2,32 +2,32 @@ PRAGMA foreign_keys = ON;
 
 CREATE TABLE departamentos_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(16) NOT NULL CHECK (length(name) <= 16)
+    name TEXT NOT NULL CHECK (length(name) <= 16)
 );
 
 CREATE TABLE roles_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(16) NOT NULL CHECK (length(name) <= 16)
+    name TEXT NOT NULL CHECK (length(name) <= 16)
 );
 
 CREATE TABLE perioricidad_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(20) NOT NULL CHECK (length(name) <= 20)
+    name TEXT NOT NULL CHECK (length(name) <= 20)
 );
 
 CREATE TABLE estados_programa_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(22) NOT NULL CHECK (length(name) <= 22)
+    name TEXT NOT NULL CHECK (length(name) <= 22)
 );
 
 CREATE TABLE estados_cuentas_empresas_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name VARCHAR(10) NOT NULL CHECK (length(name) <= 10)
+    name TEXT NOT NULL CHECK (length(name) <= 10)
 );
 
 CREATE TABLE estados_incripciones_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
-    name CHAR(8) NOT NULL CHECK (length(name) = 8)
+    name TEXT NOT NULL CHECK (length(name) = 8)
 );
 
 CREATE TABLE personas_ed (
@@ -35,22 +35,22 @@ CREATE TABLE personas_ed (
         CHECK (length(documento_unico) BETWEEN 1 AND 9 AND documento_unico NOT GLOB '*[^A-Z0-9]*'),
     is_dui                  INTEGER NOT NULL CHECK (is_dui IN (0, 1)),
 
-    nombre                  VARCHAR(250) NOT NULL CHECK (length(nombre) <= 250),
-    apellido                VARCHAR(250) NOT NULL CHECK (length(apellido) <= 250),
+    nombre                  TEXT NOT NULL CHECK (length(nombre) <= 250),
+    apellido                TEXT NOT NULL CHECK (length(apellido) <= 250),
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
     nacimiento              TEXT NOT NULL CHECK (date(nacimiento) = nacimiento),
 );
 
 CREATE TABLE empresas_ed (
     id     INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre VARCHAR(250) NOT NULL CHECK (length(nombre) <= 250),
-    campo  VARCHAR(250) CHECK (length(campo) <= 250),
+    nombre TEXT NOT NULL CHECK (length(nombre) <= 250),
+    campo  TEXT CHECK (length(campo) <= 250),
     estado INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)
 );
 
 CREATE TABLE programas_ed (
     id                           INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre                       VARCHAR(250) NOT NULL CHECK (length(nombre) <= 250),
+    nombre                       TEXT NOT NULL CHECK (length(nombre) <= 250),
     entidad_responsable          INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado                       INTEGER NOT NULL REFERENCES estados_programa_ec(id),
     tipo_beneficio               TEXT,
