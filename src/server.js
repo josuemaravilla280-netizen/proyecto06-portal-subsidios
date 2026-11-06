@@ -4,6 +4,7 @@ const session = require('express-session');
 const helmet = require('helmet');
 const path = require('path');
 const { inicializarUsuariosDemo } = require('./data/memoria');
+
 const authRoutes = require('./routes/auth');
 const beneficiariosRoutes = require('./routes/beneficiarios');
 const programasRoutes = require('./routes/programas');
@@ -26,4 +27,5 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, mensaje: 'API disponi
 app.use('/api/*', (_req, res) => res.status(404).json({ ok: false, mensaje: 'Recurso no encontrado.' }));
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ ok: false, mensaje: 'Error interno del servidor.' }); });
 const port = Number(process.env.PORT || 3000);
+
 inicializarUsuariosDemo().then(() => app.listen(port, () => console.log(`Portal disponible en http://localhost:${port}`))).catch(err => { console.error('No se pudieron crear las cuentas de prueba.', err); process.exit(1); });

@@ -1,5 +1,7 @@
 PRAGMA foreign_keys = ON;
 
+-- Entidades de catalogo --
+
 CREATE TABLE departamentos_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK (length(name) <= 16)
@@ -34,6 +36,8 @@ CREATE TABLE estados_incripciones_ec (
     id   INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL CHECK (length(name) = 8)
 );
+
+-- Entidades de datos --
 
 CREATE TABLE personas_ed (
     documento_unico         TEXT NOT NULL PRIMARY KEY
@@ -81,6 +85,7 @@ CREATE TABLE cuentas_beneficiarios_ed (
               substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))
     ),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
+    contraseña_hash TEXT,
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id),
     datos             TEXT CHECK (json_valid(datos))
 );
@@ -93,6 +98,7 @@ CREATE TABLE cuentas_staff_ed (
               substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))
     ),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
+    contraseña_hash TEXT,
     rol               INTEGER NOT NULL REFERENCES roles_ec(id),
     empresa           INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)
@@ -106,3 +112,11 @@ CREATE TABLE inscripciones_ed (
     estado          INTEGER NOT NULL REFERENCES estados_incripciones_ec(id),
     PRIMARY KEY (usuario_id, programa_id)
 );
+
+-- Inserts de catalogos --
+INSERT INTO departamentos_ec (name) VALUES ('Ahuachapán'),('Cabañas'),('Chalatenango'),('Cuscatlán'),('La Libertad'),('Morazán'),('La Paz'),('Santa Ana'),('San Miguel'),('San Salvador'),('San Vicente'),('Sonsonate'),('La Unión'),('Usulután');
+INSERT INTO estados_cuentas_empresas_ec (name) VALUES ('activa'),('inactivada'),('eliminada');
+INSERT INTO estados_incripciones_ec (name) VALUES ('enespera'),('denegada'),('aprovada');
+INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletado'),('finalizado'),('eliminado');
+INSERT INTO perioricidad_ec (name) VALUES ('Una vez'),('Diaria'),('Semanal'),('Mensual'),('Trimestral'),('Anual');
+INSERT INTO roles_ec (name) VALUES ('admin'),('empresa_admin'),('operador'),('empresa_operador');

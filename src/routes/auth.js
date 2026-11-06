@@ -1,15 +1,24 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { usuarios } = require('../data/memoria');
+const { buscarCuentasPorDocumento } = require('../data/getData');
 const router = express.Router();
 
 router.post('/login', async (req, res, next) => {
   try {
-    const identificador = String(req.body.identificador || '').trim();
+    const identificador = String(req.body.identificador || '').trim().toUpperCase();
     const password = String(req.body.password || '');
     if (!identificador || !password) return res.status(400).json({ ok: false, mensaje: 'Escriba su DUI o pasaporte y contraseña.' });
-    const usuario = usuarios.find(u => u.identificador === identificador);
-    if (!usuario || !(await bcrypt.compare(password, usuario.passwordHash))) return res.status(401).json({ ok: false, mensaje: 'Credenciales incorrectas.' });
+
+    const cuentas = await buscarCuentasPorDocumento(identificador);
+    let usuario = null;
+    for (const cuenta of cuentas) {
+      if (cuenta.passwordHash && await bcrypt.compare(password, cuenta.passwordHash)) {
+        usuario = cuenta;
+        break;
+      }
+    }
+    if (!usuario) return res.status(401).json({ ok: false, mensaje: 'Credenciales incorrectas.' });
+
     req.session.regenerate(err => {
       if (err) return next(err);
       req.session.usuario = { id: usuario.id, nombre: usuario.nombre, identificador: usuario.identificador, rol: usuario.rol };
