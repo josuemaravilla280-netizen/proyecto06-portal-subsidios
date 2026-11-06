@@ -1,0 +1,27 @@
+/* Complemento de estilos.css (no lo modifica) */
+.perfil { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+.perfil-img { width: 280px; max-width: 100%; aspect-ratio: 3/2; object-fit: contain; background: #1a2332; border: 1px solid #667184; border-radius: 8px; }
+.perfil-datos { flex: 1; min-width: 240px; list-style: none; display: grid; gap: 10px; }
+.perfil-datos li { font-size: 0.9rem; color: #f4f6fa; }
+.perfil-datos span { display: block; font-size: 0.75rem; color: #94a3b8; }
+.vista-panel + .vista-panel { margin-top: 18px; }
+.lista-docs { list-style: none; }
+.lista-docs li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid #667184; font-size: 0.85rem; }
+.lista-docs small { display: block; color: #94a3b8; }
+.estado-activo { color: #b9f1ce; }
+.estado-finalizado { color: #cbd5e1; }
+.estado-cancelado { color: #ffd0d0; }
+.fila-registrar select { width: auto; min-height: 36px; background: #fff; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; margin-right: 8px; }
+.info-programa { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
+.info-programa .full { grid-column: 1 / -1; }
+.info-programa span { display: block; font-size: 0.75rem; color: #94a3b8; }
+.info-programa strong { font-size: 0.95rem; font-weight: 600; }
+.graficos { display: flex; gap: 24px; flex-wrap: wrap; justify-content: space-around; }
+.grafico { text-align: center; flex: 1; min-width: 260px; }
+.grafico h3 { font-size: 0.95rem; margin-bottom: 12px; }
+.grafico svg { width: 240px; max-width: 100%; height: auto; }
+.grafico text { fill: #fff; font-size: 11px; font-weight: 700; }
+.leyenda { list-style: none; display: inline-block; text-align: left; margin-top: 12px; font-size: 0.82rem; color: #e1e6ee; }
+.leyenda li { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.leyenda i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+@media (max-width: 760px) { .info-programa { grid-template-columns: 1fr; } }
