@@ -4,101 +4,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asignación de Beneficios</title>
+    <link rel="stylesheet" href="css/estilos.css">
     <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
+<div class="panel-app">
+    <!-- Encabezado del Módulo -->
+    <header class="barra-app">
+        <div>
+            <p>Subsidia / Horizonte Social / Asignaciones</p>
+            <h1>Asignación de beneficios</h1>
+            <p>Selecciona personas elegibles, revisa cupos y aprueba el lote de asignaciones.</p>
+        </div>
+        <button class="btn-secundario">Ver asignaciones</button>
+    </header>
 
-    <div class="main-content">
-        <header class="header">
-            <div class="title-row">
+    <!-- Banner Informativo -->
+    <div class="notice">
+        ℹ️ Elegibilidad → Asignación → Entrega. Aprobar este lote reserva un cupo y genera una asignación; no registra una entrega.
+    </div>
+
+    <!-- Menú de Filtros Superiores utilizando Form Grid adaptado -->
+    <section class="form-grid" style="margin-bottom: 24px;">
+        <div class="field">
+            <label>Empresa</label>
+            <select><option>Horizonte Social</option></select>
+        </div>
+        <div class="field">
+            <label>Programa</label>
+            <select><option>Gas Hogar - PRG-GAS-01</option></select>
+        </div>
+        <div class="field">
+            <label>Periodo</label>
+            <select><option>Octubre 2026 - OCT-26</option></select>
+        </div>
+        <div class="field">
+            <label>Localidad</label>
+            <select><option>Todas las habilitadas</option></select>
+        </div>
+    </section>
+
+    <!-- Bloque de Métricas (Tarjetas de Indicadores) -->
+    <section class="info-programa" style="margin-bottom: 24px;">
+        <div class="vista-panel">
+            <span>Cupos del periodo</span>
+            <strong>600</strong>
+            <p style="font-size: 0.75rem; margin-top: 4px;">1 recarga de gas por asignación</p>
+        </div>
+        <div class="vista-panel">
+            <span>Asignaciones existentes</span>
+            <strong>480</strong>
+            <p style="font-size: 0.75rem; margin-top: 4px;">360 entregadas - 120 pendientes</p>
+        </div>
+        <div class="vista-panel">
+            <span>Cupos disponibles</span>
+            <strong id="cupos-disponibles">120</strong>
+            <p style="font-size: 0.75rem; margin-top: 4px;">Antes de aprobar el lote actual</p>
+        </div>
+        <div class="vista-panel">
+            <span>Selección preparada</span>
+            <strong id="seleccion-preparada">24</strong>
+            <p style="font-size: 0.75rem; margin-top: 4px;">Sin duplicados - dentro del cupo</p>
+        </div>
+    </section>
+
+    <!-- Área de Datos Central Dividida -->
+    <div class="pantalla-layout" style="align-items: flex-start; max-width: 100%; gap: 24px;">
+        
+        <!-- Contenedor Izquierdo: Tabla Principal -->
+        <section class="vista-panel" style="flex: 2; min-width: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                 <div>
-                    <p class="breadcrumbs">Subsidia / Horizonte Social / Asignaciones</p>
-                    <h1>Asignación de beneficios</h1>
-                    <p class="subtitle">Selecciona personas elegibles, revisa cupos y aprueba el lote de asignaciones.</p>
+                    <h2>Cola de personas elegibles</h2>
+                    <p style="font-size: 0.8rem;">48 candidaturas · <span id="table-selected-count">3</span> seleccionadas para el lote</p>
                 </div>
-                <button class="btn-secondary">Ver asignaciones</button>
+                <button class="btn">Revisión del lote</button>
             </div>
-            
-            <div class="info-banner">
-                ℹ️ Elegibilidad → Asignación → Entrega. Aprobar este lote reserva un cupo y genera una asignación; no registra una entrega.
-            </div>
-        </header>
 
-        <!-- Selectores / Filtros Superiores -->
-        <section class="filters-grid">
-            <div class="filter-group">
-                <label>Empresa</label>
-                <select><option></option></select>
-                <select><option></option></select>
-                <select><option></option></select>
-                <select><option></option></select>
-            </div>
-            <div class="filter-group">
-                <label>Programa</label>
-                <select><option>Gas Hogar - PRG-GAS-01</option></select>
-            </div>
-            <div class="filter-group">
-                <label>Periodo</label>
-                <select><option>Octubre 2026 - OCT-26</option></select>
-            </div>
-            <div class="filter-group">
-                <label>Localidad</label>
-                <select><option>Todas las habilitadas</option></select>
-            </div>
-        </section>
-
-        <!-- Bloque de Métricas -->
-        <section class="metrics-grid">
-            <div class="card">
-                <h4>Cupos del periodo</h4>
-                <div class="value">600</div>
-                <span class="subtext">1 recarga de gas por asignación</span>
-            </div>
-            <div class="card">
-                <h4>Asignaciones existentes</h4>
-                <div class="value">480</div>
-                <span class="subtext">360 entregadas - 120 pendientes</span>
-            </div>
-            <div class="card">
-                <h4>Cupos disponibles</h4>
-                <div class="value" id="cupos-disponibles">120</div>
-                <span class="subtext">Antes de aprobar el lote actual</span>
-            </div>
-            <div class="card">
-                <h4>Selección preparada</h4>
-                <div class="value" id="seleccion-preparada">24</div>
-                <span class="subtext">Sin duplicados - dentro del cupo</span>
-            </div>
-        </section>
-
-        <!-- Área de Datos Central -->
-        <div class="workspace">
-            <!-- Tabla Principal con Filtros Internos -->
-            <section class="table-container">
-                <div class="table-header">
-                    <div>
-                        <h2>Cola de personas elegibles</h2>
-                        <p class="subtext">48 candidaturas · <span id="table-selected-count">3</span> seleccionadas para el lote</p>
-                    </div>
-                    <button class="btn-small">Revisión del lote</button>
+            <div class="form-grid" style="margin-bottom: 15px; margin-top: 0;">
+                <div class="field">
+                    <label>Criterio de selección</label>
+                    <select><option>Validación más antigua primero</option></select>
                 </div>
-
-                <div class="table-filters">
-                    <div class="filter-group">
-                        <label>Criterio de selección</label>
-                        <select><option>Validación más antigua primero</option></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Elegibilidad</label>
-                        <select><option>Documentación completa</option></select>
-                    </div>
+                <div class="field">
+                    <label>Elegibilidad</label>
+                    <select><option>Documentación completa</option></select>
                 </div>
+            </div>
 
-                <div class="select-all-row">
-                    <input type="checkbox" id="select-all" checked>
-                    <label for="select-all">Seleccionar las 24 candidaturas sin incidencias del lote</label>
-                </div>
+            <div class="check">
+                <input type="checkbox" id="select-all" checked>
+                <label for="select-all">Seleccionar las 24 candidaturas sin incidencias del lote</label>
+            </div>
 
+            <div class="tabla-contenedor">
                 <table>
                     <thead>
                         <tr>
@@ -110,55 +109,56 @@
                         </tr>
                     </thead>
                     <tbody id="beneficiarios-body">
-                        <!-- Inyectado dinámicamente -->
+                        <!-- Inyectado dinámicamente mediante JS -->
                     </tbody>
                 </table>
-                
-                <div class="table-footer">
-                    <span>5 registros visibles de 48 candidaturas</span>
-                    <span>&lt; Página 1 &gt;</span>
-                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #94a3b8; padding-top: 14px;">
+                <span>5 registros visibles de 48 candidaturas</span>
+                <span>&lt; Página 1 &gt;</span>
+            </div>
 
-                <div class="alert-box">
-                    ⚠️ 3 duplicados y 2 expedientes incompletos excluidos de la revisión de 29 candidaturas. La persona BEN-1042 ya tiene una asignación en OCT-26.
-                </div>
-            </section>
+            <div class="mensaje visible error" style="margin-top: 16px;">
+                ⚠️ 3 duplicados y 2 expedientes incompletos excluidos de la revisión de 29 candidaturas. La persona BEN-1042 ya tiene una asignación en OCT-26.
+            </div>
+        </section>
 
-            <!-- Panel de Resumen Lateral -->
-            <section class="card summary-panel">
-                <div class="summary-header">
-                    <h2>Resumen antes de aprobar</h2>
-                    <p class="subtext">Lote LOT-026-011 - todavía no aprobado</p>
-                </div>
+        <!-- Contenedor Derecho: Panel de Resumen -->
+        <section class="tarjeta-beneficios" style="flex: 1; max-width: 100%;">
+            <div style="margin-bottom: 20px;">
+                <h2 style="font-size: 1.3rem; margin-bottom: 4px;">Resumen antes de aprobar</h2>
+                <p class="subtitulo" style="margin-bottom: 0;">Lote LOT-026-011 - todavía no aprobado</p>
+            </div>
 
-                <div class="summary-details">
-                    <div class="detail-row"><span class="label">Empresa</span><strong>Horizonte Social</strong></div>
-                    <div class="detail-row"><span class="label">Programa</span><strong>Gas Hogar</strong></div>
-                    <div class="detail-row"><span class="label">Periodo</span><strong>OCT-26</strong></div>
-                    <div class="detail-row"><span class="label">Beneficio</span><strong>1 recarga por hogar</strong></div>
-                    <hr class="divider">
-                    <div class="detail-row"><span class="label">Personas</span><strong id="summary-personas">24 seleccionadas</strong></div>
-                    <div class="detail-row"><span class="label">Unidades</span><strong id="summary-unidades">24 recargas</strong></div>
-                    <div class="detail-row"><span class="label">Cupos actuales</span><strong>120 disponibles</strong></div>
-                    <div class="detail-row"><span class="label">Cupos posteriores</span><strong id="summary-posteriores" class="text-accent">96 disponibles</strong></div>
-                </div>
+            <ul class="lista-docs" style="margin-bottom: 20px;">
+                <li><span>Empresa</span><strong>Horizonte Social</strong></li>
+                <li><span>Programa</span><strong>Gas Hogar</strong></li>
+                <li><span>Periodo</span><strong>OCT-26</strong></li>
+                <li><span>Beneficio</span><strong>1 recarga por hogar</strong></li>
+                <li><span>Personas</span><strong id="summary-personas">24 seleccionadas</strong></li>
+                <li><span>Unidades</span><strong id="summary-unidades">24 recargas</strong></li>
+                <li><span>Cupos actuales</span><strong>120 disponibles</strong></li>
+                <li><span>Cupos posteriores</span><strong id="summary-posteriores" class="estado-activo">96 disponibles</strong></li>
+            </ul>
 
-                <ul class="verification-list">
-                    <li class="checked">24 expedientes cumplen los criterios vigentes</li>
-                    <li class="checked">Sin duplicados por programa y periodo</li>
-                    <li class="checked">24 cupos no superan el disponible</li>
-                    <li class="checked">He revisado la selección y su alcance</li>
-                </ul>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                <div class="check"><input type="checkbox" checked disabled><label>24 expedientes cumplen criterios</label></div>
+                <div class="check"><input type="checkbox" checked disabled><label>Sin duplicados por programa y periodo</label></div>
+                <div class="check"><input type="checkbox" checked disabled><label>24 cupos no superan el disponible</label></div>
+                <div class="check"><input type="checkbox" checked disabled><label>He revisado la selección y su alcance</label></div>
+            </div>
 
-                <p class="info-text-small">ℹ️ La revisión de duplicados no bloquea beneficios de otro programa o de un periodo diferente.</p>
+            <p class="nota-demo" style="margin-bottom: 20px;">ℹ️ La revisión de duplicados no bloquea beneficios de otro programa o de un periodo diferente.</p>
 
-                <div class="action-buttons">
-                    <button class="btn-primary" id="btn-aprobar">✓ Aprobar <span id="btn-count">24</span> asignaciones</button>
-                    <button class="btn-text">Guardar selección</button>
-                </div>
-            </section>
-        </div>
+            <div class="actions" style="margin-top: 0;">
+                <button class="btn-primario" id="btn-aprobar">✓ Aprobar <span id="btn-count">24</span> asignaciones</button>
+                <button class="btn" style="width: 100%;">Guardar selección</button>
+            </div>
+        </section>
     </div>
+</div>
+
 
     <script src="app.js"></script>
 </body>
