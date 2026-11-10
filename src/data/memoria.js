@@ -10,7 +10,7 @@ let siguienteProgramaId = 1;
 async function inicializarUsuariosDemo() {
   if (usuarios.length) return;
   const cuentas = [
-    { id: 1, nombre: 'Administrador', identificador: '00000000-0', passwordPlano: 'Blancag', rol: 'administrador' },
+    { id: 1, nombre: 'Administrador', identificador: '00000000-0', passwordPlano: 'Blancag', rol: 'admin' },
     { id: 2, nombre: 'Operador', identificador: '11111111-1', passwordPlano: 'ZuleymaM', rol: 'operador' },
     { id: 3, nombre: 'Beneficiario', identificador: '22222222-2', passwordPlano: 'BeneficiarioKelvin', rol: 'beneficiario' }
   ];

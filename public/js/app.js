@@ -139,12 +139,12 @@ function construirMenu() {
     [
       'beneficiarios',
       'Beneficiarios',
-      ['administrador', 'operador'].includes(usuarioActual.rol)
+      ['admin', 'operador'].includes(usuarioActual.rol)
     ],
     [
       'programas',
       'Programas',
-      usuarioActual.rol === 'administrador'
+      usuarioActual.rol === 'admin'
     ]
   ];
 

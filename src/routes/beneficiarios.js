@@ -2,7 +2,7 @@ const express = require('express');
 const { beneficiarios, nuevoIdBeneficiario } = require('../data/memoria');
 const { permitir } = require('../middleware/auth');
 const router = express.Router();
-const operador = permitir('administrador', 'operador');
+const operador = permitir('admin', 'operador');
 function limpiar(body) {
   return {
     nombre: String(body.nombre || '').trim(),

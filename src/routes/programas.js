@@ -5,7 +5,7 @@ const { permitir } = require('../middleware/auth');
 const router = express.Router();
 
 // Permite el acceso únicamente al administrador.
-const admin = permitir('administrador');
+const admin = permitir('admin');
 
 // Campos de texto que se reciben del formulario.
 const camposTexto = [
