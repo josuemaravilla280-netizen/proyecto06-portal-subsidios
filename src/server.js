@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const path = require('path');
 const { inicializarUsuariosDemo } = require('./data/memoria');
 
-const authRoutes = require('./routes/auth');
+const authRoutes = require('./routes/auth').default;
 const beneficiariosRoutes = require('./routes/beneficiarios');
 const programasRoutes = require('./routes/programas');
 

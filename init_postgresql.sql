@@ -107,6 +107,9 @@ INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletad
 INSERT INTO perioricidad_ec (name) VALUES ('Una vez'),('Diaria'),('Semanal'),('Mensual'),('Trimestral'),('Anual');
 INSERT INTO roles_ec (name) VALUES ('admin'),('empresa_admin'),('operador'),('empresa_operador');
 
+--Test empresa--
+INSERT INTO empresas_ed (nombre,campo,estado) VALUES ('gob','Estado',1)
+
 -- Usuario para el servidor --
 CREATE ROLE server_user WITH LOGIN PASSWORD 'server_user';
 
@@ -114,9 +117,8 @@ GRANT CONNECT ON DATABASE test TO server_user;
 GRANT USAGE ON SCHEMA public TO server_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO server_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO server_user;
-
--- Para tablas y secuencias creadas después --
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO server_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
-  GRANT USAGE, SELECT ON SEQUENCES TO server_user;
+    -- Para tablas y secuencias creadas después --
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO server_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO server_user;
