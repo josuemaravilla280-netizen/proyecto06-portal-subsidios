@@ -19,161 +19,161 @@ const departamentos = [
   'Chalatenango',
   'Cuscatlán',
   'La Libertad',
-  'La Paz',
-  'La Unión',
   'Morazán',
+  'La Paz',
+  'Santa Ana',
   'San Miguel',
   'San Salvador',
   'San Vicente',
-  'Santa Ana',
   'Sonsonate',
-  'Usulután'
+  'La Unión',
+  'Usulután',
 ];
 
 
 // Evita que los valores ingresados se interpreten como HTML.
 function escapar(valor = '') {
-  return String(valor).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[c]);
+    return String(valor).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[c]);
 }
 
 // Muestra un mensaje de error o de éxito.
 function mensaje(elemento, texto, tipo = 'error') {
-  elemento.textContent = texto;
-  elemento.className = `mensaje visible ${tipo}`;
+    elemento.textContent = texto;
+    elemento.className = `mensaje visible ${tipo}`;
 }
 
 // Envía solicitudes al servidor y procesa las respuestas.
 async function api(url, opciones = {}) {
-  const respuesta = await fetch(url, {
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(opciones.headers || {})
-    },
-    ...opciones
-  });
+    const respuesta = await fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(opciones.headers || {})
+        },
+        ...opciones
+    });
 
-  const datos = await respuesta.json().catch(() => ({
-    ok: false,
-    mensaje: 'Respuesta no válida del servidor.'
-  }));
+    const datos = await respuesta.json().catch(() => ({
+        ok: false,
+        mensaje: 'Respuesta no válida del servidor.'
+    }));
 
-  if (!respuesta.ok) {
-    throw new Error(datos.mensaje || 'Ocurrió un error.');
-  }
+    if (!respuesta.ok) {
+        throw new Error(datos.mensaje || 'Ocurrió un error.');
+    }
 
-  return datos;
+    return datos;
 }
 
 // INICIO Y CIERRE DE SESIÓN
 
 // Permite mostrar u ocultar la contraseña.
 $('#btnTogglePassword').addEventListener('click', () => {
-  const campo = $('#password');
+    const campo = $('#password');
 
-  campo.type = campo.type === 'password' ? 'text' : 'password';
+    campo.type = campo.type === 'password' ? 'text' : 'password';
 });
 
 // Procesa el formulario de inicio de sesión.
 $('#inicioForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  mensajeLogin.className = 'mensaje';
+    e.preventDefault();
+    mensajeLogin.className = 'mensaje';
 
-  try {
-    const r = await api('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        identificador: $('#identificador').value.trim(),
-        password: $('#password').value
-      })
-    });
+    try {
+        const r = await api('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                documento_unico: $('#documento_unico').value.trim(),
+                password: $('#password').value
+            })
+        });
 
-    usuarioActual = r.usuario;
-    mostrarAplicacion();
-  } catch (err) {
-    mensaje(mensajeLogin, err.message);
-  }
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (err) {
+        mensaje(mensajeLogin, err.message);
+    }
 });
 
 // Cierra la sesión y regresa a la pantalla de inicio.
 $('#btnSalir').addEventListener('click', async () => {
-  try {
-    await api('/api/auth/logout', {
-      method: 'POST',
-      body: '{}'
-    });
-  } finally {
-    usuarioActual = null;
-    panelApp.classList.add('oculto');
-    pantallaLogin.classList.remove('oculto');
-    $('#inicioForm').reset();
-    mensajeLogin.className = 'mensaje';
-  }
+    try {
+        await api('/api/auth/logout', {
+            method: 'POST',
+            body: '{}'
+        });
+    } finally {
+        usuarioActual = null;
+        panelApp.classList.add('oculto');
+        pantallaLogin.classList.remove('oculto');
+        $('#inicioForm').reset();
+        mensajeLogin.className = 'mensaje';
+    }
 });
 
 // Muestra la aplicación después de iniciar sesión.
 function mostrarAplicacion() {
-  pantallaLogin.classList.add('oculto');
-  panelApp.classList.remove('oculto');
+    pantallaLogin.classList.add('oculto');
+    panelApp.classList.remove('oculto');
 
-  $('#datosUsuario').textContent =
-    `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
+    $('#datosUsuario').textContent =
+        `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
 
-  construirMenu();
-  inicio();
+    construirMenu();
+    inicio();
 }
 
 // Crea las opciones disponibles según el rol.
 function construirMenu() {
-  const menu = $('#menuPrincipal');
-  menu.innerHTML = '';
+    const menu = $('#menuPrincipal');
+    menu.innerHTML = '';
 
-  const opciones = [
-    ['inicio', 'Inicio', true],
-    [
-      'beneficiarios',
-      'Beneficiarios',
-      ['admin', 'operador'].includes(usuarioActual.rol)
-    ],
-    [
-      'programas',
-      'Programas',
-      usuarioActual.rol === 'admin'
-    ]
-  ];
+    const opciones = [
+        ['inicio', 'Inicio', true],
+        [
+            'beneficiarios',
+            'Beneficiarios',
+            ['admin', 'operador'].includes(usuarioActual.rol)
+        ],
+        [
+            'programas',
+            'Programas',
+            usuarioActual.rol === 'admin'
+        ]
+    ];
 
-  // Crea solamente las opciones permitidas para el usuario.
-  opciones
-    .filter((opcion) => opcion[2])
-    .forEach(([id, titulo]) => {
-      const boton = document.createElement('button');
+    // Crea solamente las opciones permitidas para el usuario.
+    opciones
+        .filter((opcion) => opcion[2])
+        .forEach(([id, titulo]) => {
+            const boton = document.createElement('button');
 
-      boton.textContent = titulo;
-      boton.dataset.vista = id;
+            boton.textContent = titulo;
+            boton.dataset.vista = id;
 
-      boton.addEventListener('click', () => {
-        menu.querySelectorAll('button').forEach((elemento) => {
-          elemento.classList.toggle('activo', elemento === boton);
+            boton.addEventListener('click', () => {
+                menu.querySelectorAll('button').forEach((elemento) => {
+                    elemento.classList.toggle('activo', elemento === boton);
+                });
+
+                if (id === 'inicio') inicio();
+                if (id === 'beneficiarios') vistaBeneficiarios();
+                if (id === 'programas') vistaProgramas();
+            });
+
+            menu.appendChild(boton);
         });
-
-        if (id === 'inicio') inicio();
-        if (id === 'beneficiarios') vistaBeneficiarios();
-        if (id === 'programas') vistaProgramas();
-      });
-
-      menu.appendChild(boton);
-    });
 }
 
 // Muestra la pantalla principal.
 function inicio() {
-  vista.innerHTML = `
+    vista.innerHTML = `
     <h2>Bienvenido al Portal de Subsidios</h2>
 
     <p>
@@ -187,29 +187,29 @@ function inicio() {
     </p>
   `;
 
-  $('#menuPrincipal button')?.classList.add('activo');
+    $('#menuPrincipal button')?.classList.add('activo');
 }
 
 // Muestra mensajes dentro de la vista actual.
 function mostrarMensajeVista(texto, tipo = 'error') {
-  let elemento = $('#mensajeVista');
+    let elemento = $('#mensajeVista');
 
-  if (!elemento) {
-    elemento = document.createElement('p');
-    elemento.id = 'mensajeVista';
-    elemento.className = 'mensaje';
-    vista.prepend(elemento);
-  }
+    if (!elemento) {
+        elemento = document.createElement('p');
+        elemento.id = 'mensajeVista';
+        elemento.className = 'mensaje';
+        vista.prepend(elemento);
+    }
 
-  mensaje(elemento, texto, tipo);
+    mensaje(elemento, texto, tipo);
 }
 
 
 // Muestra el formulario y la tabla de beneficiarios.
 async function vistaBeneficiarios() {
-  beneficiarioEditando = null;
+    beneficiarioEditando = null;
 
-  vista.innerHTML = `
+    vista.innerHTML = `
     <h2>Registro de beneficiarios</h2>
 
     <p>
@@ -222,17 +222,17 @@ async function vistaBeneficiarios() {
     <div class="tabla-contenedor" id="tablaBeneficiarios"></div>
   `;
 
-  $('#formBeneficiario').addEventListener(
-    'submit',
-    guardarBeneficiario
-  );
+    $('#formBeneficiario').addEventListener(
+        'submit',
+        guardarBeneficiario
+    );
 
-  await cargarBeneficiarios();
+    await cargarBeneficiarios();
 }
 
 // Construye el formulario de registro o actualización.
 function formBeneficiario(d = {}) {
-  return `
+    return `
     <form id="formBeneficiario">
       <div class="form-grid">
 
@@ -257,12 +257,24 @@ function formBeneficiario(d = {}) {
         </div>
 
         <div class="field">
-          <label for="identificador">DUI o pasaporte *</label>
+          <label for="documento_unico">DUI o pasaporte *</label>
           <input
-            id="identificador"
-            name="identificador"
-            value="${escapar(d.identificador || '')}"
+            id="documento_unico"
+            name="documento_unico"
+            value="${escapar(d.documento_unico || '')}"
             placeholder="01234567-8"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="nacimiento">Fecha de nacimiento *</label>
+          <input
+            id="nacimiento"
+            name="nacimiento"
+            type="date"
+            max="${new Date().toISOString().slice(0, 10)}"
+            value="${escapar(String(d.nacimiento || '').slice(0, 10))}"
             required
           >
         </div>
@@ -346,51 +358,51 @@ function formBeneficiario(d = {}) {
 
 // Obtiene los valores ingresados en un formulario.
 function valoresFormulario(form) {
-  return Object.fromEntries(new FormData(form).entries());
+    return Object.fromEntries(new FormData(form).entries());
 }
 
 // Registra un beneficiario o actualiza uno existente.
 async function guardarBeneficiario(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const datos = valoresFormulario(e.currentTarget);
+    const datos = valoresFormulario(e.currentTarget);
 
-  try {
-    const r = await api(
-      beneficiarioEditando
-        ? `/api/beneficiarios/${beneficiarioEditando}`
-        : '/api/beneficiarios',
-      {
-        method: beneficiarioEditando ? 'PUT' : 'POST',
-        body: JSON.stringify(datos)
-      }
-    );
+    try {
+        const r = await api(
+            beneficiarioEditando
+                ? `/api/beneficiarios/${beneficiarioEditando}`
+                : '/api/beneficiarios',
+            {
+                method: beneficiarioEditando ? 'PUT' : 'POST',
+                body: JSON.stringify(datos)
+            }
+        );
 
-    mostrarMensajeVista(r.mensaje, 'exito');
-    beneficiarioEditando = null;
+        mostrarMensajeVista(r.mensaje, 'exito');
+        beneficiarioEditando = null;
 
-    await vistaBeneficiarios();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await vistaBeneficiarios();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Consulta y muestra los beneficiarios registrados.
 async function cargarBeneficiarios() {
-  try {
-    const r = await api('/api/beneficiarios');
-    const cont = $('#tablaBeneficiarios');
+    try {
+        const r = await api('/api/beneficiarios');
+        const cont = $('#tablaBeneficiarios');
 
-    if (!r.datos.length) {
-      cont.innerHTML = `
+        if (!r.datos.length) {
+            cont.innerHTML = `
         <p class="estado-vacio">
           Todavía no hay beneficiarios registrados.
         </p>
       `;
-      return;
-    }
+            return;
+        }
 
-    cont.innerHTML = `
+        cont.innerHTML = `
       <h3>Beneficiarios registrados</h3>
 
       <table>
@@ -411,7 +423,7 @@ async function cargarBeneficiarios() {
                 ${escapar(b.nombre)} ${escapar(b.apellido)}
               </td>
 
-              <td>${escapar(b.identificador)}</td>
+              <td>${escapar(b.documento_unico)}</td>
               <td>${escapar(b.telefono)}</td>
 
               <td>
@@ -432,36 +444,36 @@ async function cargarBeneficiarios() {
       </table>
     `;
 
-    // Asigna la acción de editar a cada botón.
-    cont.querySelectorAll('[data-editar-beneficiario]')
-      .forEach((boton) => {
-        boton.addEventListener('click', () => {
-          editarBeneficiario(
-            Number(boton.dataset.editarBeneficiario)
-          );
-        });
-      });
+        // Asigna la acción de editar a cada botón.
+        cont.querySelectorAll('[data-editar-beneficiario]')
+            .forEach((boton) => {
+                boton.addEventListener('click', () => {
+                    editarBeneficiario(
+                        boton.dataset.editarBeneficiario
+                    );
+                });
+            });
 
-    // Permite limpiar el formulario.
-    $('#limpiarBeneficiario').addEventListener('click', () => {
-      $('#formBeneficiario').reset();
-    });
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        // Permite limpiar el formulario.
+        $('#limpiarBeneficiario').addEventListener('click', () => {
+            $('#formBeneficiario').reset();
+        });
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Busca un beneficiario y carga sus datos para editarlos.
 async function editarBeneficiario(id) {
-  try {
-    const r = await api('/api/beneficiarios');
-    const d = r.datos.find((elemento) => elemento.id === id);
+    try {
+        const r = await api('/api/beneficiarios');
+        const d = r.datos.find((elemento) => elemento.id === id);
 
-    if (!d) return;
+        if (!d) return;
 
-    beneficiarioEditando = id;
+        beneficiarioEditando = id;
 
-    vista.innerHTML = `
+        vista.innerHTML = `
       <h2>Actualizar beneficiario</h2>
 
       <p>HU05 · Modifique los campos necesarios.</p>
@@ -474,28 +486,28 @@ async function editarBeneficiario(id) {
       ></div>
     `;
 
-    $('#formBeneficiario').addEventListener(
-      'submit',
-      guardarBeneficiario
-    );
+        $('#formBeneficiario').addEventListener(
+            'submit',
+            guardarBeneficiario
+        );
 
-    $('#limpiarBeneficiario').addEventListener(
-      'click',
-      () => vistaBeneficiarios()
-    );
+        $('#limpiarBeneficiario').addEventListener(
+            'click',
+            () => vistaBeneficiarios()
+        );
 
-    await cargarBeneficiarios();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await cargarBeneficiarios();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 
 // Muestra el formulario y la tabla de programas.
 async function vistaProgramas() {
-  programaEditando = null;
+    programaEditando = null;
 
-  vista.innerHTML = `
+    vista.innerHTML = `
     <h2>Gestión de programas de subsidios</h2>
 
     <p>
@@ -507,60 +519,60 @@ async function vistaProgramas() {
     <div class="tabla-contenedor" id="tablaProgramas"></div>
   `;
 
-  $('#formPrograma').addEventListener('submit', guardarPrograma);
+    $('#formPrograma').addEventListener('submit', guardarPrograma);
 
-  $('#cancelarPrograma').addEventListener('click', () => {
-    programaEditando = null;
-    vistaProgramas();
-  });
+    $('#cancelarPrograma').addEventListener('click', () => {
+        programaEditando = null;
+        vistaProgramas();
+    });
 
-  await cargarProgramas();
+    await cargarProgramas();
 }
 
 // Construye el formulario de creación o edición de programas.
 function formPrograma(d = {}) {
-  const entidades = [
-    ['raiz', 'Raíz Cooperativa · EMP-02'],
-    ['mag', 'Ministerio de Agricultura y Ganadería (MAG)'],
-    ['integracion', 'Dirección de Integración'],
-    ['fundasal', 'FUNDASAL'],
-    ['fusal', 'FUSAL']
-  ];
+    const entidades = [
+        ['raiz', 'Raíz Cooperativa · EMP-02'],
+        ['mag', 'Ministerio de Agricultura y Ganadería (MAG)'],
+        ['integracion', 'Dirección de Integración'],
+        ['fundasal', 'FUNDASAL'],
+        ['fusal', 'FUSAL']
+    ];
 
-  const tipos = [
-    'Insumos agrícolas',
-    'Becas',
-    'Apoyo para vivienda',
-    'Recursos humanitarios',
-    'Apoyo económico',
-    'Vales de transporte',
-    'Canasta básica'
-  ];
+    const tipos = [
+        'Insumos agrícolas',
+        'Becas',
+        'Apoyo para vivienda',
+        'Recursos humanitarios',
+        'Apoyo económico',
+        'Vales de transporte',
+        'Canasta básica'
+    ];
 
-  const estados = [
-    'Activo',
-    'En revisión',
-    'Suspendido',
-    'Cerrado'
-  ];
+    const estados = [
+        'Activo',
+        'En revisión',
+        'Suspendido',
+        'Cerrado'
+    ];
 
-  const unidades = [
-    'Paquete / kit',
-    'Unidad',
-    'Saco',
-    'Litro',
-    'Libras',
-    'Metros'
-  ];
+    const unidades = [
+        'Paquete / kit',
+        'Unidad',
+        'Saco',
+        'Litro',
+        'Libras',
+        'Metros'
+    ];
 
-  const periodicidades = [
-    'Una vez por campaña',
-    'Mensual',
-    'Trimestral',
-    'Anual'
-  ];
+    const periodicidades = [
+        'Una vez por campaña',
+        'Mensual',
+        'Trimestral',
+        'Anual'
+    ];
 
-  return `
+    return `
     <form id="formPrograma">
 
       <header class="form-header">
@@ -569,8 +581,8 @@ function formPrograma(d = {}) {
 
           <p class="subtitle">
             ${d.claveCorrelativa
-              ? escapar(d.claveCorrelativa)
-              : 'Clave correlativa generada al guardar'}
+            ? escapar(d.claveCorrelativa)
+            : 'Clave correlativa generada al guardar'}
           </p>
         </div>
 
@@ -582,12 +594,12 @@ function formPrograma(d = {}) {
       <div class="form-grid">
 
         ${campo(
-          'Nombre del programa',
-          'nombre',
-          d.nombre,
-          'text',
-          'Ej. Cosecha Activa'
-        )}
+                'Nombre del programa',
+                'nombre',
+                d.nombre,
+                'text',
+                'Ej. Cosecha Activa'
+            )}
 
         <div class="field">
           <label for="entidad">Entidad responsable *</label>
@@ -610,8 +622,8 @@ function formPrograma(d = {}) {
 
           <select id="estado" name="estado" required>
             ${opciones(
-              estados.map((x) => [x, x]),
-              d.estado || 'Activo'
+                estados.map((x) => [x, x]),
+                d.estado || 'Activo'
             )}
           </select>
         </div>
@@ -628,13 +640,13 @@ function formPrograma(d = {}) {
         </div>
 
         ${campo(
-          'Cantidad por asignación',
-          'cantidad',
-          d.cantidad,
-          'number',
-          'Cantidad',
-          'min="1"'
-        )}
+                'Cantidad por asignación',
+                'cantidad',
+                d.cantidad,
+                'number',
+                'Cantidad',
+                'min="1"'
+            )}
 
         <div class="field">
           <label for="unidad">Unidad de entrega *</label>
@@ -645,31 +657,31 @@ function formPrograma(d = {}) {
         </div>
 
         ${campo(
-          'Cupos del período',
-          'cupos',
-          d.cupos,
-          'number',
-          '250',
-          'min="1"'
-        )}
+                'Cupos del período',
+                'cupos',
+                d.cupos,
+                'number',
+                '250',
+                'min="1"'
+            )}
 
         ${campo(
-          'Monto por asignación (USD)',
-          'monto',
-          d.monto ?? 0,
-          'number',
-          '0',
-          'min="0" step="0.01"'
-        )}
+                'Monto por asignación (USD)',
+                'monto',
+                d.monto ?? 0,
+                'number',
+                '0',
+                'min="0" step="0.01"'
+            )}
 
         ${campo(
-          'Clave correlativa',
-          'claveCorrelativa',
-          d.claveCorrelativa,
-          'text',
-          'Se genera automáticamente',
-          'readonly'
-        )}
+                'Clave correlativa',
+                'claveCorrelativa',
+                d.claveCorrelativa,
+                'text',
+                'Se genera automáticamente',
+                'readonly'
+            )}
 
         <div class="field full">
           <label for="composicion">Composición del paquete *</label>
@@ -694,12 +706,12 @@ function formPrograma(d = {}) {
           ${campo('Fecha de cierre', 'fechaCierre', d.fechaCierre, 'date')}
 
           ${campo(
-            'Período de asignación',
-            'periodo',
-            d.periodo,
-            'text',
-            'Ej. Campaña 2026'
-          )}
+                'Período de asignación',
+                'periodo',
+                d.periodo,
+                'text',
+                'Ej. Campaña 2026'
+            )}
 
           <div class="field">
             <label for="periodicidad">Periodicidad *</label>
@@ -708,7 +720,7 @@ function formPrograma(d = {}) {
               ${opciones(
                 periodicidades.map((x) => [x, x]),
                 d.periodicidad
-              )}
+            )}
             </select>
           </div>
 
@@ -719,7 +731,7 @@ function formPrograma(d = {}) {
               ${opciones(
                 departamentos.map((x) => [x, x]),
                 d.zonas
-              )}
+            )}
             </select>
           </div>
 
@@ -729,28 +741,26 @@ function formPrograma(d = {}) {
       <section class="section">
         <h3>Criterios de elegibilidad</h3>
 
-        ${
-          [
+        ${[
             ['unidad', 'Unidad productiva registrada y validada'],
             ['residencia', 'Residencia o actividad en una zona habilitada'],
             ['declaracion', 'Declaración de pequeña producción documentada'],
             ['consentimiento', 'Consentimiento para tratamiento de datos vigente']
-          ].map(([valor, texto]) => `
+        ].map(([valor, texto]) => `
             <label class="check">
               <input
                 type="checkbox"
                 name="criterios"
                 value="${valor}"
-                ${
-                  (d.criterios || [
-                    'unidad',
-                    'residencia',
-                    'declaracion',
-                    'consentimiento'
-                  ]).includes(valor)
-                    ? 'checked'
-                    : ''
-                }
+                ${(d.criterios || [
+                'unidad',
+                'residencia',
+                'declaracion',
+                'consentimiento'
+            ]).includes(valor)
+                ? 'checked'
+                : ''
+            }
               >
 
               <span>${texto}</span>
@@ -792,14 +802,14 @@ function formPrograma(d = {}) {
 
 // Genera un campo de formulario reutilizable.
 function campo(
-  label,
-  name,
-  value = '',
-  type = 'text',
-  placeholder = '',
-  extra = ''
+    label,
+    name,
+    value = '',
+    type = 'text',
+    placeholder = '',
+    extra = ''
 ) {
-  return `
+    return `
     <div class="field">
       <label for="${name}">${label} *</label>
 
@@ -818,7 +828,7 @@ function campo(
 
 // Genera las opciones de un elemento select.
 function opciones(lista, seleccionado = '') {
-  return `
+    return `
     <option value="">Seleccione...</option>
 
     ${lista.map(([valor, texto]) => `
@@ -832,52 +842,52 @@ function opciones(lista, seleccionado = '') {
 
 // Registra un programa nuevo o actualiza uno existente.
 async function guardarPrograma(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const formulario = e.currentTarget;
-  const datos = valoresFormulario(formulario);
+    const formulario = e.currentTarget;
+    const datos = valoresFormulario(formulario);
 
-  // Obtiene únicamente los criterios que están marcados.
-  datos.criterios = [
-    ...formulario.querySelectorAll('input[name="criterios"]:checked')
-  ].map((elemento) => elemento.value);
+    // Obtiene únicamente los criterios que están marcados.
+    datos.criterios = [
+        ...formulario.querySelectorAll('input[name="criterios"]:checked')
+    ].map((elemento) => elemento.value);
 
-  try {
-    const r = await api(
-      programaEditando
-        ? `/api/programas/${programaEditando}`
-        : '/api/programas',
-      {
-        method: programaEditando ? 'PUT' : 'POST',
-        body: JSON.stringify(datos)
-      }
-    );
+    try {
+        const r = await api(
+            programaEditando
+                ? `/api/programas/${programaEditando}`
+                : '/api/programas',
+            {
+                method: programaEditando ? 'PUT' : 'POST',
+                body: JSON.stringify(datos)
+            }
+        );
 
-    mostrarMensajeVista(r.mensaje, 'exito');
-    programaEditando = null;
+        mostrarMensajeVista(r.mensaje, 'exito');
+        programaEditando = null;
 
-    await vistaProgramas();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await vistaProgramas();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Consulta y muestra todos los programas registrados.
 async function cargarProgramas() {
-  try {
-    const r = await api('/api/programas');
-    const cont = $('#tablaProgramas');
+    try {
+        const r = await api('/api/programas');
+        const cont = $('#tablaProgramas');
 
-    if (!r.datos.length) {
-      cont.innerHTML = `
+        if (!r.datos.length) {
+            cont.innerHTML = `
         <p class="estado-vacio">
           Todavía no hay programas creados.
         </p>
       `;
-      return;
-    }
+            return;
+        }
 
-    cont.innerHTML = `
+        cont.innerHTML = `
       <h3>Programas registrados</h3>
 
       <table>
@@ -933,37 +943,37 @@ async function cargarProgramas() {
       </table>
     `;
 
-    // Asigna la acción de edición a cada programa.
-    cont.querySelectorAll('[data-editar-programa]')
-      .forEach((boton) => {
-        boton.addEventListener('click', () => {
-          editarPrograma(Number(boton.dataset.editarPrograma));
-        });
-      });
+        // Asigna la acción de edición a cada programa.
+        cont.querySelectorAll('[data-editar-programa]')
+            .forEach((boton) => {
+                boton.addEventListener('click', () => {
+                    editarPrograma(Number(boton.dataset.editarPrograma));
+                });
+            });
 
-    // Asigna la acción de eliminación a cada programa.
-    cont.querySelectorAll('[data-eliminar-programa]')
-      .forEach((boton) => {
-        boton.addEventListener('click', () => {
-          eliminarPrograma(Number(boton.dataset.eliminarPrograma));
-        });
-      });
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        // Asigna la acción de eliminación a cada programa.
+        cont.querySelectorAll('[data-eliminar-programa]')
+            .forEach((boton) => {
+                boton.addEventListener('click', () => {
+                    eliminarPrograma(Number(boton.dataset.eliminarPrograma));
+                });
+            });
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Busca un programa y carga sus datos para editarlos.
 async function editarPrograma(id) {
-  try {
-    const r = await api('/api/programas');
-    const d = r.datos.find((elemento) => elemento.id === id);
+    try {
+        const r = await api('/api/programas');
+        const d = r.datos.find((elemento) => elemento.id === id);
 
-    if (!d) return;
+        if (!d) return;
 
-    programaEditando = id;
+        programaEditando = id;
 
-    vista.innerHTML = `
+        vista.innerHTML = `
       <h2>Editar programa</h2>
 
       <p>HU07 · Actualice la información del programa.</p>
@@ -973,60 +983,60 @@ async function editarPrograma(id) {
       <div class="tabla-contenedor" id="tablaProgramas"></div>
     `;
 
-    $('#formPrograma').addEventListener('submit', guardarPrograma);
+        $('#formPrograma').addEventListener('submit', guardarPrograma);
 
-    $('#cancelarPrograma').addEventListener('click', () => {
-      programaEditando = null;
-      vistaProgramas();
-    });
+        $('#cancelarPrograma').addEventListener('click', () => {
+            programaEditando = null;
+            vistaProgramas();
+        });
 
-    await cargarProgramas();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await cargarProgramas();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Elimina un programa después de confirmar la acción.
 async function eliminarPrograma(id) {
-  if (!confirm('¿Está seguro de eliminar este programa?')) {
-    return;
-  }
+    if (!confirm('¿Está seguro de eliminar este programa?')) {
+        return;
+    }
 
-  try {
-    const r = await api(`/api/programas/${id}`, {
-      method: 'DELETE'
-    });
+    try {
+        const r = await api(`/api/programas/${id}`, {
+            method: 'DELETE'
+        });
 
-    mostrarMensajeVista(r.mensaje, 'exito');
+        mostrarMensajeVista(r.mensaje, 'exito');
 
-    await cargarProgramas();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await cargarProgramas();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 
 // Comprueba si existe una sesión activa al cargar la página.
 (async function comprobarSesion() {
-  try {
-    const r = await api('/api/auth/me');
+    try {
+        const r = await api('/api/auth/me');
 
-    usuarioActual = r.usuario;
-    mostrarAplicacion();
-  } catch (_) {
-    // El usuario aún no ha iniciado sesión.
-  }
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (_) {
+        // El usuario aún no ha iniciado sesión.
+    }
 })();
 
 
 // Muestra un aviso para las páginas que aún no están implementadas.
 document.querySelectorAll('[data-static]').forEach((enlace) => {
-  enlace.addEventListener('click', (e) => {
-    e.preventDefault();
+    enlace.addEventListener('click', (e) => {
+        e.preventDefault();
 
-    alert(
-      'Página informativa pendiente de elaboración; ' +
-      'no forma parte de las ocho HU de este Sprint.'
-    );
-  });
+        alert(
+            'Página informativa pendiente de elaboración; ' +
+            'no forma parte de las ocho HU de este Sprint.'
+        );
+    });
 });
