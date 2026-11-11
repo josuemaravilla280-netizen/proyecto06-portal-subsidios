@@ -15,9 +15,9 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(session({
-  name: 'sid', secret: process.env.SESSION_SECRET || 'solo-desarrollo-cambie-este-secreto',
-  resave: false, saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 }
+    name: 'sid', secret: process.env.SESSION_SECRET || 'solo-desarrollo-cambie-este-secreto',
+    resave: false, saveUninitialized: false,
+    cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 }
 }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/auth', authRoutes);
