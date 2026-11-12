@@ -68,10 +68,14 @@ export async function obtenerBeneficiario(id) {
            EXTRACT(YEAR FROM age(p.nacimiento))::int             AS edad,
            CASE WHEN p.is_dui THEN p.documento_unico END         AS numero_documento,
            CASE WHEN NOT p.is_dui THEN p.documento_unico END     AS numero_pasaporte,
-           c.datos->>'imagen_documento'                          AS imagen_documento
+           c.datos->>'imagen_documento'                          AS imagen_documento,
+           to_char(p.nacimiento, 'YYYY-MM-DD')                   AS fecha_nacimiento,
+           ec.name                                               AS estado_cuenta,
+           c.datos                                               AS datos
     FROM cuentas_beneficiarios_ed c
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
+    JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
     WHERE c.id = ${id}`;
   return fila ?? null;
 }
@@ -83,10 +87,14 @@ export async function programasDeBeneficiario(id) {
     SELECT pr.id,
            pr.nombre,
            lower(ep.name)      AS estado,
-           i.datos->'entrega'    AS entrega
+           i.datos->'entrega'    AS entrega,
+           to_char(i.fecha_solicitud, 'YYYY-MM-DD') AS fecha_solicitud,
+           ei.name             AS estado_inscripcion,
+           i.datos             AS datos
     FROM inscripciones_ed i
     JOIN programas_ed pr        ON pr.id = i.programa_id
     JOIN estados_programa_ec ep ON ep.id = pr.estado
+    JOIN estados_incripciones_ec ei ON ei.id = i.estado
     WHERE i.usuario_id = ${id}
     ORDER BY pr.nombre`;
   return filas.map((f) => ({
@@ -100,6 +108,9 @@ export async function programasDeBeneficiario(id) {
           retraso: retraso(f.entrega.desde),
         }
       : null,
+    fecha_solicitud: f.fecha_solicitud,
+    estado_inscripcion: f.estado_inscripcion,
+    datos: f.datos,
   }));
 }
 
@@ -135,7 +146,7 @@ export async function crearInscripcion(id, programaId) {
 
 /* ---------- Programas ---------- */
 // programas_ed.datos: { cantidad, unidad, cupos, monto, clave_correlativa,
-//                       composicion, periodo, periodo_asignacion }
+//                       composicion, periodo, criterios }
 
 // "2 cajas · Arroz, frijol y aceite"
 const ENTREGA = sql`concat_ws(' · ',
@@ -151,10 +162,13 @@ export function listarProgramas() {
            tb.name                    AS tipo,
            pe.name                    AS periodicidad,
            ${ENTREGA}                   AS entrega,
-           pr.fecha_inicio,
-           pr.fecha_final,
+           em.nombre                    AS entidad,
+           pr.datos->>'clave_correlativa'            AS "claveCorrelativa",
+           to_char(pr.fecha_inicio, 'YYYY-MM-DD')    AS "fechaInicio",
+           to_char(pr.fecha_final, 'YYYY-MM-DD')     AS "fechaCierre",
            (pr.datos->>'cupos')::int    AS cupos
     FROM programas_ed pr
+    JOIN empresas_ed em         ON em.id = pr.entidad_responsable
     JOIN estados_programa_ec ep ON ep.id = pr.estado
     JOIN tipos_beneficios_ec tb ON tb.id = pr.tipo_beneficio
     JOIN perioricidad_ec pe     ON pe.id = pr.perioricidad
@@ -175,20 +189,32 @@ export async function obtenerPrograma(id) {
            pr.tipo_beneficio                          AS tipo_id,
            pr.estado                                  AS estado_id,
            pr.perioricidad                            AS periodicidad_id,
-           pr.fecha_inicio,
-           pr.fecha_final,
+           to_char(pr.fecha_inicio, 'YYYY-MM-DD')     AS fecha_inicio,
+           to_char(pr.fecha_final, 'YYYY-MM-DD')      AS fecha_final,
+           em.nombre                                  AS entidad_nombre,
+           ep.name                                    AS estado,
+           pe.name                                    AS periodicidad,
+           pr.datos                                   AS datos,
            (pr.datos->>'cantidad')::int               AS cantidad,
            pr.datos->>'unidad'                        AS unidad,
            (pr.datos->>'monto')::float8               AS monto,
            pr.datos->>'clave_correlativa'             AS clave_correlativa,
            pr.datos->>'composicion'                   AS composicion,
            pr.datos->>'periodo'                       AS periodo,
-           pr.datos->>'periodo_asignacion'            AS periodo_asignacion,
+           pr.documentos_registro_requiere            AS documentos,
+           COALESCE(pr.datos->'criterios', '[]'::jsonb) AS criterios,
            COALESCE((SELECT array_agg(z.departamento_id ORDER BY z.departamento_id)
                      FROM programas_departamentos_ep z
-                     WHERE z.programa_id = pr.id), '{}') AS zonas
+                     WHERE z.programa_id = pr.id), '{}') AS zonas,
+           COALESCE((SELECT array_agg(dz.name ORDER BY dz.name)
+                     FROM programas_departamentos_ep z2
+                     JOIN departamentos_ec dz ON dz.id = z2.departamento_id
+                     WHERE z2.programa_id = pr.id), '{}') AS zonas_nombres
     FROM programas_ed pr
     JOIN tipos_beneficios_ec tb ON tb.id = pr.tipo_beneficio
+    JOIN empresas_ed em         ON em.id = pr.entidad_responsable
+    JOIN estados_programa_ec ep ON ep.id = pr.estado
+    JOIN perioricidad_ec pe     ON pe.id = pr.perioricidad
     WHERE pr.id = ${id}`;
   return fila ?? null;
 }
@@ -207,7 +233,16 @@ export async function estadisticasPrograma(id) {
 }
 
 /* ---------- Escritura: beneficiarios ---------- */
-// d: { documento, isDui, nombre, apellido, nacimiento, telefono, email, departamento (nombre), municipio, direccion }
+// d: { documento, isDui, nombre, apellido, nacimiento, telefono, email, departamento (id o nombre), municipio, direccion }
+
+// Acepta el id (lo que envía el select cargado desde la DB) o el nombre.
+async function buscarDepartamento(tx, valor) {
+  const v = String(valor ?? '').trim();
+  const [dep] = /^\d+$/.test(v)
+    ? await tx`SELECT id FROM departamentos_ec WHERE id = ${Number(v)}`
+    : await tx`SELECT id FROM departamentos_ec WHERE lower(name) = lower(${v})`;
+  return dep ?? null;
+}
 
 export function crearBeneficiario(d) {
   return sql.begin(async (tx) => {
@@ -215,8 +250,7 @@ export function crearBeneficiario(d) {
       SELECT 1 FROM cuentas_beneficiarios_ed WHERE persona_documento = ${d.documento}`;
     if (existe) return { duplicado: true };
 
-    const [dep] = await tx`
-      SELECT id FROM departamentos_ec WHERE lower(nombre) = lower(${d.departamento})`;
+    const dep = await buscarDepartamento(tx, d.departamento);
     if (!dep) return { departamentoInvalido: true };
 
     await tx`
@@ -244,8 +278,7 @@ export function actualizarBeneficiario(id, d) {
     if (!c) return { noEncontrado: true };
     if (d.documento !== c.persona_documento) return { documentoDistinto: true };
 
-    const [dep] = await tx`
-      SELECT id FROM departamentos_ec WHERE lower(nombre) = lower(${d.departamento})`;
+    const dep = await buscarDepartamento(tx, d.departamento);
     if (!dep) return { departamentoInvalido: true };
 
     await tx`
@@ -268,7 +301,7 @@ export function actualizarBeneficiario(id, d) {
 /* ---------- Escritura: programas ---------- */
 // d: { nombre, entidad, tipo, estado, periodicidad (ids), descripcion, fechaInicio, fechaCierre,
 //      zonas [ids de departamento], cantidad, unidad, cupos, monto, clave, composicion,
-//      periodo, periodoAsignacion }
+//      periodo, documentos, criterios [] }
 
 const datosPrograma = (d) => ({
   cantidad: d.cantidad,
@@ -277,7 +310,7 @@ const datosPrograma = (d) => ({
   monto: d.monto,
   composicion: d.composicion,
   periodo: d.periodo,
-  periodo_asignacion: d.periodoAsignacion,
+  criterios: d.criterios,
 });
 
 const claveAuto = (id) => `PRG-AGR-02-${String(id).padStart(3, '0')}`;
@@ -297,10 +330,10 @@ export function crearPrograma(d) {
     const [p] = await tx`
       INSERT INTO programas_ed
         (nombre, entidad_responsable, estado, tipo_beneficio, descripcion_beneficio,
-         fecha_inicio, fecha_final, perioricidad, datos)
+         fecha_inicio, fecha_final, perioricidad, documentos_registro_requiere, datos)
       VALUES
         (${d.nombre}, ${d.entidad}, ${d.estado}, ${d.tipo}, ${d.descripcion},
-         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad},
+         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${d.documentos},
          ${tx.json({ ...datosPrograma(d), clave_correlativa: d.clave || null })}::jsonb)
       RETURNING id`;
     if (!d.clave) {
@@ -335,6 +368,7 @@ export function actualizarPrograma(id, d) {
           fecha_inicio = ${d.fechaInicio},
           fecha_final = ${d.fechaCierre},
           perioricidad = ${d.periodicidad},
+          documentos_registro_requiere = ${d.documentos},
           datos = COALESCE(datos, '{}'::jsonb)
                   || ${tx.json({ ...datosPrograma(d), clave_correlativa: clave })}::jsonb
       WHERE id = ${id}`;

@@ -21,6 +21,53 @@ async function pedir(url, opciones = {}) {
     return j.datos ?? j.dato ?? j;
 }
 
+// ---- jsonb -> lista de [etiqueta, texto] ----
+const humanizar = (k) => {
+    const s = String(k).replace(/_/g, ' ');
+    return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+function formatear(v) {
+    if (v === null || v === undefined || v === '') return 'Sin dato';
+    if (typeof v === 'boolean') return v ? 'Sí' : 'No';
+    if (Array.isArray(v)) {
+        return v.length ? v.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ') : 'Sin dato';
+    }
+    return String(v);
+}
+
+// Aplana un objeto jsonb; `omitir` lleva rutas como 'entrega.estado'.
+function aplanar(obj, omitir = [], ruta = '', etiquetaPadre = '') {
+    const filas = [];
+    Object.entries(obj ?? {}).forEach(([k, v]) => {
+        const r = ruta ? `${ruta}.${k}` : k;
+        if (omitir.includes(r)) return;
+        const etiqueta = etiquetaPadre ? `${etiquetaPadre} · ${humanizar(k)}` : humanizar(k);
+        if (v && typeof v === 'object' && !Array.isArray(v)) filas.push(...aplanar(v, omitir, r, etiqueta));
+        else filas.push([etiqueta, formatear(v)]);
+    });
+    return filas;
+}
+
+function llenarLista(ul, filas) {
+    ul.replaceChildren();
+    if (!filas.length) {
+        const li = document.createElement('li');
+        li.textContent = 'No hay datos adicionales.';
+        ul.appendChild(li);
+        return;
+    }
+    filas.forEach(([etiqueta, valor]) => {
+        const li = document.createElement('li');
+        const s = document.createElement('span');
+        s.textContent = etiqueta;
+        const b = document.createElement('b');
+        b.textContent = valor;
+        li.append(s, b);
+        ul.appendChild(li);
+    });
+}
+
 function celda(tr, texto, clase) {
     const td = document.createElement('td');
     td.textContent = texto;
@@ -50,8 +97,7 @@ async function cargarUsuario() {
     } catch { /* sin sesión: las demás solicitudes mostrarán el error */ }
 }
 
-/* Perfil: { nombre, departamento, municipio, direccion, edad,
-             numero_documento, numero_pasaporte, imagen_documento } */
+/* Perfil: { nombre, departamento, municipio, direccion, edad, numero_documento, numero_pasaporte, imagen_documento, fecha_nacimiento, estado_cuenta, datos (jsonb de la cuenta) } */
 function sinImagen() {
     const img = $('imgDocumento');
     const ph = document.createElement('div');
@@ -69,6 +115,10 @@ async function cargarPerfil() {
     $('pEdad').textContent = p.edad ?? '';
     $('pDocumento').textContent = p.numero_documento ?? '';
     $('pPasaporte').textContent = p.numero_pasaporte ?? '';
+    $('pNacimiento').textContent = formatear(p.fecha_nacimiento);
+    $('pEstadoCuenta').textContent = formatear(p.estado_cuenta);
+    // Lo ya mostrado en otras partes de la página no se repite.
+    llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
 
     const img = $('imgDocumento');
@@ -80,7 +130,7 @@ async function cargarPerfil() {
     }
 }
 
-/* Programas: [{ id, nombre, estado, entrega: { estado: recibido|no_recibido|no_enviado, cantidad, retraso } | null }] */
+/* Programas: [{ id, nombre, estado, entrega: { estado: recibido|no_recibido|no_enviado, cantidad, retraso } | null, fecha_solicitud, estado_inscripcion, datos (jsonb de la inscripción) }] */
 function textoEntrega(e) {
     if (!e) return 'sin registro de entregas';
     if (e.estado === 'recibido') return 'último paquete recibido';
@@ -117,6 +167,25 @@ async function cargarProgramas() {
         td.appendChild(b);
         tr.appendChild(td);
         tbody.appendChild(tr);
+
+        // Parte desplegable: el resto de los datos de inscripciones_ed.
+        const trDet = document.createElement('tr');
+        const tdDet = document.createElement('td');
+        tdDet.colSpan = 4;
+        const det = document.createElement('details');
+        const sum = document.createElement('summary');
+        sum.textContent = `Datos de la inscripción en "${p.nombre}"`;
+        const ul = document.createElement('ul');
+        ul.className = 'datos-lista';
+        llenarLista(ul, [
+            ['Fecha de solicitud', formatear(p.fecha_solicitud)],
+            ['Estado de la inscripción', formatear(p.estado_inscripcion)],
+            ...aplanar(p.datos, ['entrega.estado', 'entrega.cantidad']),
+        ]);
+        det.append(sum, ul);
+        tdDet.appendChild(det);
+        trDet.appendChild(tdDet);
+        tbody.appendChild(trDet);
     });
 
     // Última fila: registrar en otro programa
