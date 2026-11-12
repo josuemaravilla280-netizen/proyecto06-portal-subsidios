@@ -119,7 +119,7 @@ CREATE TABLE tiny_log(
 -- Inserts de catalogos --
 INSERT INTO departamentos_ec (name) VALUES ('Ahuachapán'),('Cabañas'),('Chalatenango'),('Cuscatlán'),('La Libertad'),('Morazán'),('La Paz'),('Santa Ana'),('San Miguel'),('San Salvador'),('San Vicente'),('Sonsonate'),('La Unión'),('Usulután');
 INSERT INTO estados_cuentas_empresas_ec (name) VALUES ('activa'),('inactivada'),('eliminada');
-INSERT INTO estados_incripciones_ec (name) VALUES ('enespera'),('denegada'),('aprovada'),('retirada');
+INSERT INTO estados_incripciones_ec (name) VALUES ('enespera'),('denegada'),('aprovada'),('retirarS'),('retirarB');--Los 2 retirar representan si lo elimino una cuenta staff o cuenta beneficiario--
 INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletado'),('finalizado'),('eliminado');
 INSERT INTO tipos_beneficios_ec (name) VALUES ('Insumos agrícolas'),('Becas'),('Apoyo para vivienda'),('Recursos humanitarios'),('Apoyo económico'),('Vales de transporte'),('Canasta básica');
 INSERT INTO perioricidad_ec (name) VALUES ('Una vez'),('Diaria'),('Semanal'),('Mensual'),('Trimestral'),('Anual'),('Variable');
