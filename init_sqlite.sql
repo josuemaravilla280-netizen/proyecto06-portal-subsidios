@@ -113,6 +113,19 @@ CREATE TABLE inscripciones_ed (
     PRIMARY KEY (usuario_id, programa_id)
 );
 
+-- mini log --
+CREATE TABLE tiny_log (
+    is_staff            BOOLEAN, 
+    staff_actor         TEXT REFERENCES cuentas_staff_ed(id),
+    beneficiario_actor  TEXT REFERENCES cuentas_beneficiarios_ed(id),
+    action_description  TEXT NOT NULL CHECK (length(name) <= 250),
+
+    CONSTRAINT chk_actor_type CHECK (
+        (is_staff = 1 AND staff_actor        IS NOT NULL AND beneficiario_actor IS NULL) OR
+        (is_staff = 0 AND beneficiario_actor IS NOT NULL AND staff_actor        IS NULL)
+    )
+);
+
 -- Inserts de catalogos --
 INSERT INTO departamentos_ec (name) VALUES ('Ahuachapán'),('Cabañas'),('Chalatenango'),('Cuscatlán'),('La Libertad'),('Morazán'),('La Paz'),('Santa Ana'),('San Miguel'),('San Salvador'),('San Vicente'),('Sonsonate'),('La Unión'),('Usulután');
 INSERT INTO estados_cuentas_empresas_ec (name) VALUES ('activa'),('inactivada'),('eliminada');

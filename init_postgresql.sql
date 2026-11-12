@@ -99,16 +99,92 @@ CREATE TABLE inscripciones_ed (
     PRIMARY KEY (usuario_id, programa_id)
 );
 
+-- mini log --
+CREATE TABLE tiny_log(
+    is_staff           BOOLEAN,
+    staff_actor        UUID REFERENCES cuentas_staff_ed(id),
+    beneficiario_actor UUID REFERENCES cuentas_beneficiarios_ed(id),
+	action_description NOT NULL VARCHAR(250)
+
+    CONSTRAINT chk_actor_type CHECK (
+        (is_staff = true AND staff_actor IS NOT NULL AND beneficiario_actor IS NULL) OR
+        (is_staff = false  AND beneficiario_actor IS NOT NULL AND staff_actor IS NULL)
+    )
+);
+
 -- Inserts de catalogos --
 INSERT INTO departamentos_ec (name) VALUES ('Ahuachapán'),('Cabañas'),('Chalatenango'),('Cuscatlán'),('La Libertad'),('Morazán'),('La Paz'),('Santa Ana'),('San Miguel'),('San Salvador'),('San Vicente'),('Sonsonate'),('La Unión'),('Usulután');
 INSERT INTO estados_cuentas_empresas_ec (name) VALUES ('activa'),('inactivada'),('eliminada');
 INSERT INTO estados_incripciones_ec (name) VALUES ('enespera'),('denegada'),('aprovada');
 INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletado'),('finalizado'),('eliminado');
+INSERT INTO tipos_beneficios_ec (name) VALUES ('Insumos agrícolas'),('Becas'),('Apoyo para vivienda'),('Recursos humanitarios'),('Apoyo económico'),('Vales de transporte'),('Canasta básica');
 INSERT INTO perioricidad_ec (name) VALUES ('Una vez'),('Diaria'),('Semanal'),('Mensual'),('Trimestral'),('Anual');
 INSERT INTO roles_ec (name) VALUES ('admin'),('empresa_admin'),('operador'),('empresa_operador');
 
---Test empresa--
+
+--Test--
 INSERT INTO empresas_ed (nombre,campo,estado) VALUES ('gob','Estado',1)
+INSERT INTO personas_ed
+    (documento_unico, is_dui, nombre, apellido, departamento_residencia, nacimiento)
+VALUES
+    ('000000000', true, 'Administrador', 'PENDIENTE', 1, '1900-01-01'),
+    ('111111111', true, 'Operador',      'PENDIENTE', 1, '1900-01-01'),
+    ('222222222', true, 'Beneficiario',  'PENDIENTE', 1, '1900-01-01');
+	
+INSERT INTO cuentas_staff_ed
+    (persona_documento, contraseña_hash, rol, empresa, estado)
+VALUES
+    ('000000000', '$2b$12$Mb5PjwALepi678TUXXcD0eBPUv.TE09155wkSoazTAPWpg7xBEoxG', 1, 1, 1),  -- Administrador
+    ('111111111', '$2b$12$uOxl2VbBdjhH6EroHsMlh.c0HxVLgJJfRLJxyxCuPd7koygbbiJDq', 3, 1, 1);  -- Operador
+
+	INSERT INTO cuentas_beneficiarios_ed
+    (persona_documento, contraseña_hash, estado)
+VALUES
+    ('222222222',
+     '$2b$12$kQICOKRmZQtA/aYUGIeTv.W3RNv.S4MqOUGrd.4yg1B8YifnakVky',
+     1);
+
+INSERT INTO tipos_beneficios_ec (name) VALUES
+  ('Insumos agrícolas'),
+  ('Becas'),
+  ('Apoyo para vivienda'),
+  ('Recursos humanitarios'),
+  ('Apoyo económico'),
+  ('Vales de transporte'),
+  ('Canasta básica');
+
+WITH nuevo AS (
+  INSERT INTO programas_ed
+    (nombre, entidad_responsable, estado, tipo_beneficio, descripcion_beneficio,
+     fecha_inicio, fecha_final, perioricidad, documentos_registro_requiere, datos)
+  VALUES (
+    'programa test',
+	1,
+	1,
+    (SELECT id FROM tipos_beneficios_ec WHERE name   = 'Insumos agrícolas'),
+    'test insumos agricolas',
+    '2026-01-15',
+    '2026-12-15',
+    1,
+    'TEST DOCUMENTOS REQUERIDOS',
+    '{
+      "cantidad": 1,
+      "unidad": "Paquete / kit",
+      "cupos": 250,
+      "monto": 0,
+      "clave_correlativa": "PRG-AGR-02-001",
+      "composicion": "Semillas, fertilizante y herramientas básicas.",
+      "periodo": "Campaña 2026",
+      "criterios": ["unidad", "residencia", "declaracion", "consentimiento"]
+    }'::jsonb
+  )
+  RETURNING id
+)
+INSERT INTO programas_departamentos_ep (programa_id, departamento_id)
+SELECT nuevo.id, d.id
+FROM nuevo
+JOIN departamentos_ec d ON d.name IN ('San Miguel', 'Usulután', 'La Paz');
+
 
 -- Usuario para el servidor --
 CREATE ROLE server_user WITH LOGIN PASSWORD 'server_user';
