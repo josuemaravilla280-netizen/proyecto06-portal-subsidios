@@ -1,4 +1,9 @@
 import sql from './db.mjs';
+// Hay que fragmentar las funciones a que regresen ciertos campos de cada entidad solamente
+// Y que las de datos de beneficiarios y su inscripcion necesiten comprobar si la session es de la cuenta que se solicita o del staff
+// Lo demas como los datos de los programas deben se publicas, sin necesitar autenticacion.
+// A lo mucho podrian poner que las de programas de empresas necesiten que sea una cuenta de la empresa
+// Tambien los operadores deben tener vista de los programas que existen, que operan, lo que es exclusivo del administrador es la creacion y edicion
 
 function retraso(desde) {
   if (!desde) return '';
