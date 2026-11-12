@@ -1,4 +1,4 @@
-// Uso: beneficiario.html?id=123
+// Uso: beneficiario.html?id=<uuid de cuentas_beneficiarios_ed>
 const ID = new URLSearchParams(location.search).get('id');
 const API = `/api/beneficiarios/${encodeURIComponent(ID)}`;
 const $ = (id) => document.getElementById(id);
@@ -9,10 +9,16 @@ function aviso(texto, tipo = 'error') {
     m.className = `mensaje visible ${tipo}`;
 }
 
-async function pedir(url, opciones) {
-    const r = await fetch(url, { credentials: 'same-origin', ...opciones });
-    if (!r.ok) throw new Error(`Error ${r.status}`);
-    return r.status === 204 ? null : r.json();
+// El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
+async function pedir(url, opciones = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        ...opciones,
+        headers: { 'Content-Type': 'application/json', ...(opciones.headers || {}) },
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
+    return j.datos ?? j.dato ?? j;
 }
 
 function celda(tr, texto, clase) {
@@ -23,7 +29,38 @@ function celda(tr, texto, clase) {
     return td;
 }
 
-/* Perfil: { nombre, departamento, municipio, direccion, edad, numero_documento, numero_pasaporte, imagen_documento } */
+// "En revisión" -> "estado-en-revision"
+const claseEstado = (e) =>
+    'estado-' + String(e || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-');
+
+function abrirSeguro(url) {
+    try {
+        const u = new URL(url, location.origin);
+        if (u.protocol === 'http:' || u.protocol === 'https:') window.open(u.href, '_blank', 'noopener');
+        else aviso('Enlace no válido.');
+    } catch {
+        aviso('Enlace no válido.');
+    }
+}
+
+async function cargarUsuario() {
+    try {
+        const r = await pedir('/api/auth/me');
+        if (r.usuario) $('datosUsuario').textContent = `${r.usuario.nombre} · Rol: ${r.usuario.rol}`;
+    } catch { /* sin sesión: las demás solicitudes mostrarán el error */ }
+}
+
+/* Perfil: { nombre, departamento, municipio, direccion, edad,
+             numero_documento, numero_pasaporte, imagen_documento } */
+function sinImagen() {
+    const img = $('imgDocumento');
+    const ph = document.createElement('div');
+    ph.className = 'perfil-img';
+    ph.style.cssText = 'display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;';
+    ph.textContent = 'Sin imagen del documento';
+    img.replaceWith(ph);
+}
+
 async function cargarPerfil() {
     const p = await pedir(API);
     $('pNombre').textContent = p.nombre ?? '';
@@ -32,19 +69,28 @@ async function cargarPerfil() {
     $('pEdad').textContent = p.edad ?? '';
     $('pDocumento').textContent = p.numero_documento ?? '';
     $('pPasaporte').textContent = p.numero_pasaporte ?? '';
-    $('imgDocumento').src = p.imagen_documento || `${API}/imagen-documento`;
     document.title = `${p.nombre} - Portal de Subsidios`;
+
+    const img = $('imgDocumento');
+    if (p.imagen_documento) {
+        img.onerror = sinImagen;
+        img.src = p.imagen_documento;
+    } else {
+        sinImagen();
+    }
 }
 
-/* Programas: [{ id, nombre, estado: activo|finalizado|cancelado,
-   entrega: { estado: recibido|no_recibido|no_enviado, cantidad, retraso } }] */
+/* Programas: [{ id, nombre, estado, entrega: { estado: recibido|no_recibido|no_enviado, cantidad, retraso } | null }] */
 function textoEntrega(e) {
-    if (!e) return '';
+    if (!e) return 'sin registro de entregas';
     if (e.estado === 'recibido') return 'último paquete recibido';
-    const n = e.cantidad ?? 1;
-    const uno = n === 1;
+    if (e.estado !== 'no_recibido' && e.estado !== 'no_enviado') return '';
     const motivo = e.estado === 'no_enviado' ? 'enviado' : 'recibido';
-    return `${n} ${uno ? 'paquete no ha' : 'paquetes no han'} sido ${motivo}${uno ? '' : 's'} en ${e.retraso}`;
+    const n = Number(e.cantidad) || 0;
+    if (n < 1) return `paquete no ${motivo}`;
+    const uno = n === 1;
+    const base = `${n} ${uno ? 'paquete no ha' : 'paquetes no han'} sido ${motivo}${uno ? '' : 's'}`;
+    return e.retraso ? `${base} en ${e.retraso}` : base;
 }
 
 async function cargarProgramas() {
@@ -55,7 +101,7 @@ async function cargarProgramas() {
     programas.forEach((p) => {
         const tr = document.createElement('tr');
         celda(tr, p.nombre);
-        celda(tr, p.estado, `estado-${p.estado}`);
+        celda(tr, p.estado, claseEstado(p.estado));
         celda(tr, textoEntrega(p.entrega));
         const td = document.createElement('td');
         const b = document.createElement('button');
@@ -89,7 +135,7 @@ async function cargarProgramas() {
     tbody.appendChild(tr);
 }
 
-/* GET /api/programas -> [{ id, nombre }] */
+/* GET /api/programas -> [{ id, nombre, ... }] */
 async function mostrarSelector(td, actuales) {
     try {
         const todos = await pedir('/api/programas');
@@ -108,7 +154,6 @@ async function mostrarSelector(td, actuales) {
             try {
                 await pedir(`${API}/programas`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ programa_id: sel.value }),
                 });
                 await cargarProgramas();
@@ -123,17 +168,24 @@ async function cargarDocumentos() {
     const docs = await pedir(`${API}/documentos`);
     const ul = $('listaDocumentos');
     ul.replaceChildren();
+    if (!docs.length) {
+        const li = document.createElement('li');
+        li.className = 'estado-vacio';
+        li.textContent = 'No hay documentos subidos.';
+        ul.appendChild(li);
+        return;
+    }
     docs.forEach((d) => {
         const li = document.createElement('li');
         const info = document.createElement('div');
-        info.textContent = d.tipo;
+        info.textContent = d.tipo ?? '';
         const small = document.createElement('small');
         small.textContent = d.nombre_archivo ?? '';
         info.appendChild(small);
         const ver = document.createElement('button');
         ver.className = 'btn';
         ver.textContent = 'Ver';
-        ver.onclick = () => window.open(d.url, '_blank', 'noopener');
+        ver.onclick = () => abrirSeguro(d.url);
         li.append(info, ver);
         ul.appendChild(li);
     });
@@ -144,5 +196,6 @@ $('btnCerrar').onclick = () => window.close();
 if (!ID) {
     aviso('Falta el ID del beneficiario.');
 } else {
+    cargarUsuario();
     Promise.all([cargarPerfil(), cargarProgramas(), cargarDocumentos()]).catch((e) => aviso(e.message));
 }
