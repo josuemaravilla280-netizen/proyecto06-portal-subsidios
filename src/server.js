@@ -20,6 +20,7 @@ app.use(session({
     cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 1000 * 60 * 60 }
 }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use('/api/catalogos', require('./routes/catalogos'));
 app.use('/api/auth', authRoutes);
 app.use('/api/beneficiarios', beneficiariosRoutes);
 app.use('/api/programas', programasRoutes);
