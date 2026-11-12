@@ -113,10 +113,14 @@ async function cargarPerfil() {
     $('pUbicacion').textContent = [p.departamento, p.municipio].filter(Boolean).join(' / ');
     $('pDireccion').textContent = p.direccion ?? '';
     $('pEdad').textContent = p.edad ?? '';
-    $('pDocumento').textContent = p.numero_documento ?? '';
-    $('pPasaporte').textContent = p.numero_pasaporte ?? '';
     $('pNacimiento').textContent = formatear(p.fecha_nacimiento);
     $('pEstadoCuenta').textContent = formatear(p.estado_cuenta);
+    const doc = (p.numero_documento ?? '').trim();
+    const pas = (p.numero_pasaporte ?? '').trim();
+    $('pDocumento').textContent = doc;
+    $('pPasaporte').textContent = pas;
+    $('pDocumento').closest('li').style.display = doc ? '' : 'none';
+    $('pPasaporte').closest('li').style.display = pas ? '' : 'none';
     // Lo ya mostrado en otras partes de la página no se repite.
     llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
