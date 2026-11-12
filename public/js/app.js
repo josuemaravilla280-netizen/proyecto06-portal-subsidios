@@ -12,25 +12,6 @@ let usuarioActual = null;
 let programaEditando = null;
 let beneficiarioEditando = null;
 
-// Departamentos disponibles para registrar beneficiarios.
-const departamentos = [
-  'Ahuachapán',
-  'Cabañas',
-  'Chalatenango',
-  'Cuscatlán',
-  'La Libertad',
-  'Morazán',
-  'La Paz',
-  'Santa Ana',
-  'San Miguel',
-  'San Salvador',
-  'San Vicente',
-  'Sonsonate',
-  'La Unión',
-  'Usulután',
-];
-
-
 // Evita que los valores ingresados se interpreten como HTML.
 function escapar(valor = '') {
     return String(valor).replace(/[&<>"']/g, (c) => ({
@@ -70,6 +51,17 @@ async function api(url, opciones = {}) {
 
     return datos;
 }
+
+let catalogos = { departamentos: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
+
+async function cargarCatalogos() {
+    const r = await api('/api/catalogos');
+    catalogos = r.dato;
+}
+
+// Convierte un catálogo en pares [valor, texto] para opciones().
+const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.nombre]);
+
 
 // INICIO Y CIERRE DE SESIÓN
 
@@ -118,7 +110,7 @@ $('#btnSalir').addEventListener('click', async () => {
 });
 
 // Muestra la aplicación después de iniciar sesión.
-function mostrarAplicacion() {
+async function mostrarAplicacion() {
     pantallaLogin.classList.add('oculto');
     panelApp.classList.remove('oculto');
 
@@ -126,6 +118,13 @@ function mostrarAplicacion() {
         `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
 
     construirMenu();
+
+    try {
+        await cargarCatalogos();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+
     inicio();
 }
 
@@ -309,10 +308,11 @@ function formBeneficiario(d = {}) {
           >
             <option value="">Seleccione...</option>
 
-            ${departamentos.map((departamento) => `
+            ${catalogos.departamentos.map((x) => `
               <option
-                ${d.departamento === departamento ? 'selected' : ''}
-              >${departamento}</option>
+                value="${x.id}"
+                ${String(d.departamento_id) === String(x.id) ? 'selected' : ''}
+              >${escapar(x.nombre)}</option>
             `).join('')}
           </select>
         </div>
@@ -443,17 +443,16 @@ async function cargarBeneficiarios() {
         </tbody>
       </table>
     `;
-
         // Asigna la acción de editar a cada botón.
         cont.querySelectorAll('[data-editar-beneficiario]')
             .forEach((boton) => {
                 boton.addEventListener('click', () => {
-                    editarBeneficiario(
-                        boton.dataset.editarBeneficiario
+                    window.open(
+                        `/dashboards/beneficiario.html?id=${encodeURIComponent(boton.dataset.editarBeneficiario)}`,
+                        '_blank'
                     );
                 });
             });
-
         // Permite limpiar el formulario.
         $('#limpiarBeneficiario').addEventListener('click', () => {
             $('#formBeneficiario').reset();
@@ -531,31 +530,6 @@ async function vistaProgramas() {
 
 // Construye el formulario de creación o edición de programas.
 function formPrograma(d = {}) {
-    const entidades = [
-        ['raiz', 'Raíz Cooperativa · EMP-02'],
-        ['mag', 'Ministerio de Agricultura y Ganadería (MAG)'],
-        ['integracion', 'Dirección de Integración'],
-        ['fundasal', 'FUNDASAL'],
-        ['fusal', 'FUSAL']
-    ];
-
-    const tipos = [
-        'Insumos agrícolas',
-        'Becas',
-        'Apoyo para vivienda',
-        'Recursos humanitarios',
-        'Apoyo económico',
-        'Vales de transporte',
-        'Canasta básica'
-    ];
-
-    const estados = [
-        'Activo',
-        'En revisión',
-        'Suspendido',
-        'Cerrado'
-    ];
-
     const unidades = [
         'Paquete / kit',
         'Unidad',
@@ -563,13 +537,6 @@ function formPrograma(d = {}) {
         'Litro',
         'Libras',
         'Metros'
-    ];
-
-    const periodicidades = [
-        'Una vez por campaña',
-        'Mensual',
-        'Trimestral',
-        'Anual'
     ];
 
     return `
@@ -605,7 +572,7 @@ function formPrograma(d = {}) {
           <label for="entidad">Entidad responsable *</label>
 
           <select id="entidad" name="entidad" required>
-            ${opciones(entidades, d.entidad)}
+            ${opciones(deCatalogo(catalogos.entidades), String(d.entidad ?? ''))}
           </select>
         </div>
 
@@ -613,7 +580,7 @@ function formPrograma(d = {}) {
           <label for="tipo">Tipo de beneficio *</label>
 
           <select id="tipo" name="tipo" required>
-            ${opciones(tipos.map((x) => [x, x]), d.tipo)}
+            ${opciones(deCatalogo(catalogos.tipos),String(d.tipos ?? ''))}
           </select>
         </div>
 
@@ -621,10 +588,7 @@ function formPrograma(d = {}) {
           <label for="estado">Estado *</label>
 
           <select id="estado" name="estado" required>
-            ${opciones(
-                estados.map((x) => [x, x]),
-                d.estado || 'Activo'
-            )}
+            ${opciones(deCatalogo(catalogos.estados), String(d.estado_id ?? ''))} 
           </select>
         </div>
 
@@ -717,21 +681,20 @@ function formPrograma(d = {}) {
             <label for="periodicidad">Periodicidad *</label>
 
             <select id="periodicidad" name="periodicidad" required>
-              ${opciones(
-                periodicidades.map((x) => [x, x]),
-                d.periodicidad
-            )}
+              ${opciones(deCatalogo(catalogos.periodicidades), String(d.periodicidad_id ?? ''))}
             </select>
           </div>
 
           <div class="field full">
             <label for="zonas">Zonas habilitadas *</label>
 
-            <select id="zonas" name="zonas" required>
-              ${opciones(
-                departamentos.map((x) => [x, x]),
-                d.zonas
-            )}
+            <select id="zonas" name="zonas" multiple required size="7">
+              ${catalogos.departamentos.map((x) => `
+                <option
+                  value="${x.id}"
+                  ${(d.zonas || []).includes(x.id) ? 'selected' : ''}
+                >${escapar(x.nombre)}</option>
+              `).join('')}
             </select>
           </div>
 
@@ -851,6 +814,7 @@ async function guardarPrograma(e) {
     datos.criterios = [
         ...formulario.querySelectorAll('input[name="criterios"]:checked')
     ].map((elemento) => elemento.value);
+    datos.zonas = Array.from($('#zonas').selectedOptions, (o) => o.value);
 
     try {
         const r = await api(
@@ -942,15 +906,15 @@ async function cargarProgramas() {
         </tbody>
       </table>
     `;
-
-        // Asigna la acción de edición a cada programa.
         cont.querySelectorAll('[data-editar-programa]')
             .forEach((boton) => {
                 boton.addEventListener('click', () => {
-                    editarPrograma(Number(boton.dataset.editarPrograma));
+                    window.open(
+                        `/dashboards/programa.html?id=${encodeURIComponent(boton.dataset.editarPrograma)}`,
+                        '_blank'
+                    );
                 });
             });
-
         // Asigna la acción de eliminación a cada programa.
         cont.querySelectorAll('[data-eliminar-programa]')
             .forEach((boton) => {
