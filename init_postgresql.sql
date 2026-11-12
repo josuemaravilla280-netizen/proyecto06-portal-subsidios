@@ -77,6 +77,8 @@ CREATE TABLE cuentas_beneficiarios_ed (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     contraseña_hash TEXT,
+    telefono TEXT,
+    email TEXT,
     estado          INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id),
     datos           JSONB
 );
@@ -85,6 +87,8 @@ CREATE TABLE cuentas_staff_ed (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico)
     contraseña_hash TEXT,
+    telefono TEXT,
+    email TEXT,
     rol               INTEGER NOT NULL REFERENCES roles_ec(id),
     empresa           INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)
@@ -120,6 +124,18 @@ INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletad
 INSERT INTO tipos_beneficios_ec (name) VALUES ('Insumos agrícolas'),('Becas'),('Apoyo para vivienda'),('Recursos humanitarios'),('Apoyo económico'),('Vales de transporte'),('Canasta básica');
 INSERT INTO perioricidad_ec (name) VALUES ('Una vez'),('Diaria'),('Semanal'),('Mensual'),('Trimestral'),('Anual');
 INSERT INTO roles_ec (name) VALUES ('admin'),('empresa_admin'),('operador'),('empresa_operador');
+-- Usuario para el servidor --
+CREATE ROLE server_user WITH LOGIN PASSWORD 'server_user';
+
+GRANT CONNECT ON DATABASE test TO server_user;
+GRANT USAGE ON SCHEMA public TO server_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO server_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO server_user;
+    -- Para tablas y secuencias creadas después --
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO server_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT USAGE, SELECT ON SEQUENCES TO server_user;
 
 
 --Test--
@@ -184,17 +200,3 @@ INSERT INTO programas_departamentos_ep (programa_id, departamento_id)
 SELECT nuevo.id, d.id
 FROM nuevo
 JOIN departamentos_ec d ON d.name IN ('San Miguel', 'Usulután', 'La Paz');
-
-
--- Usuario para el servidor --
-CREATE ROLE server_user WITH LOGIN PASSWORD 'server_user';
-
-GRANT CONNECT ON DATABASE test TO server_user;
-GRANT USAGE ON SCHEMA public TO server_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO server_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO server_user;
-    -- Para tablas y secuencias creadas después --
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO server_user;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT USAGE, SELECT ON SEQUENCES TO server_user;

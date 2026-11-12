@@ -86,6 +86,8 @@ CREATE TABLE cuentas_beneficiarios_ed (
     ),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     contraseña_hash TEXT,
+    telefono TEXT,
+    email TEXT,
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id),
     datos             TEXT CHECK (json_valid(datos))
 );
@@ -99,6 +101,8 @@ CREATE TABLE cuentas_staff_ed (
     ),
     persona_documento TEXT NOT NULL REFERENCES personas_ed(documento_unico),
     contraseña_hash TEXT,
+    telefono TEXT,
+    email TEXT,
     rol               INTEGER NOT NULL REFERENCES roles_ec(id),
     empresa           INTEGER NOT NULL REFERENCES empresas_ed(id),
     estado            INTEGER NOT NULL REFERENCES estados_cuentas_empresas_ec(id)
