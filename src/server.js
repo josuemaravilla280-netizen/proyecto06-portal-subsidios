@@ -3,7 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const helmet = require('helmet');
 const path = require('path');
-const { inicializarUsuariosDemo } = require('./data/memoria');
+// const { inicializarUsuariosDemo } = require('./data/memoria');
 
 const authRoutes = require('./routes/auth').default;
 const beneficiariosRoutes = require('./routes/beneficiarios');
@@ -29,4 +29,5 @@ app.use('/api/*', (_req, res) => res.status(404).json({ ok: false, mensaje: 'Rec
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ ok: false, mensaje: 'Error interno del servidor.' }); });
 const port = Number(process.env.PORT || 3000);
 
-inicializarUsuariosDemo().then(() => app.listen(port, () => console.log(`Portal disponible en http://localhost:${port}`))).catch(err => { console.error('No se pudieron crear las cuentas de prueba.', err); process.exit(1); });
+// inicializarUsuariosDemo().then(() => app.listen(port, () => console.log(`Portal disponible en http://localhost:${port}`))).catch(err => { console.error('No se pudieron crear las cuentas de prueba.', err); process.exit(1); });
+app.listen(port, () => console.log(`Portal disponible en http://localhost:${port}`));
