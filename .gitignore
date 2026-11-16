@@ -2,3 +2,5 @@
 node_modules/
 npm-debug.log*
 .DS_Store
+.vscode
+proyecto6.session.sql
