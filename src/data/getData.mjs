@@ -6,17 +6,17 @@ import sql from './db.mjs';
 // Tambien los operadores deben tener vista de los programas que existen, que operan, lo que es exclusivo del administrador es la creacion y edicion
 
 function retraso(desde) {
-  if (!desde) return '';
-  const dias = Math.max(0, Math.floor((Date.now() - new Date(desde).getTime()) / 864e5));
-  if (dias < 30) return `${dias} ${dias === 1 ? 'día' : 'días'}`;
-  const meses = Math.floor(dias / 30);
-  return `${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+    if (!desde) return '';
+    const dias = Math.max(0, Math.floor((Date.now() - new Date(desde).getTime()) / 864e5));
+    if (dias < 30) return `${dias} ${dias === 1 ? 'día' : 'días'}`;
+    const meses = Math.floor(dias / 30);
+    return `${meses} ${meses === 1 ? 'mes' : 'meses'}`;
 }
 
 
 export async function searchByDoc(documento) {
-  // const sql = await getSql();
-  return sql`
+    // const sql = await getSql();
+    return sql`
     SELECT cb.id,
            p.documento_unico AS identificador,
            p.nombre,
@@ -40,7 +40,7 @@ export async function searchByDoc(documento) {
 
 
 export function listarBeneficiarios() {
-  return sql`
+    return sql`
     SELECT c.id,
            p.documento_unico            AS documento_unico,
            p.nombre,
@@ -50,16 +50,18 @@ export function listarBeneficiarios() {
            to_char(p.nacimiento, 'YYYY-MM-DD') AS nacimiento,
            c.datos->>'municipio'        AS municipio,
            c.datos->>'direccion'        AS direccion,
-           c.datos->>'telefono'         AS telefono,
-           c.datos->>'email'            AS correo
+           c.telefono                   AS telefono,
+           c.email                      AS correo,
+           ec.name                      AS estado
     FROM cuentas_beneficiarios_ed c
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
+    JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
     ORDER BY p.apellido, p.nombre`;
 }
 
 export async function obtenerBeneficiario(id) {
-  const [fila] = await sql`
+    const [fila] = await sql`
     SELECT c.id,
            p.nombre || ' ' || p.apellido                         AS nombre,
            d.name                                              AS departamento,
@@ -69,6 +71,12 @@ export async function obtenerBeneficiario(id) {
            CASE WHEN p.is_dui THEN p.documento_unico END         AS numero_documento,
            CASE WHEN NOT p.is_dui THEN p.documento_unico END     AS numero_pasaporte,
            c.datos->>'imagen_documento'                          AS imagen_documento,
+           p.nombre                                              AS nombres,
+           p.apellido                                            AS apellido,
+           p.documento_unico                                     AS documento_unico,
+           p.departamento_residencia                             AS departamento_id,
+           c.telefono                                            AS telefono,
+           c.email                                               AS correo,
            to_char(p.nacimiento, 'YYYY-MM-DD')                   AS fecha_nacimiento,
            ec.name                                               AS estado_cuenta,
            c.datos                                               AS datos
@@ -77,13 +85,13 @@ export async function obtenerBeneficiario(id) {
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
     JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
     WHERE c.id = ${id}`;
-  return fila ?? null;
+    return fila ?? null;
 }
 
 // entrega en inscripciones_ed.datos:
 // { "entrega": { "estado": "recibido|no_recibido|no_enviado", "cantidad": 2, "desde": "2026-09-01" } }
 export async function programasDeBeneficiario(id) {
-  const filas = await sql`
+    const filas = await sql`
     SELECT pr.id,
            pr.nombre,
            lower(ep.name)      AS estado,
@@ -97,52 +105,119 @@ export async function programasDeBeneficiario(id) {
     JOIN estados_incripciones_ec ei ON ei.id = i.estado
     WHERE i.usuario_id = ${id}
     ORDER BY pr.nombre`;
-  return filas.map((f) => ({
-    id: f.id,
-    nombre: f.nombre,
-    estado: f.estado,
-    entrega: f.entrega
-      ? {
-          estado: f.entrega.estado,
-          cantidad: f.entrega.cantidad ?? 0,
-          retraso: retraso(f.entrega.desde),
-        }
-      : null,
-    fecha_solicitud: f.fecha_solicitud,
-    estado_inscripcion: f.estado_inscripcion,
-    datos: f.datos,
-  }));
+    return filas.map((f) => ({
+        id: f.id,
+        nombre: f.nombre,
+        estado: f.estado,
+        entrega: f.entrega
+            ? {
+                estado: f.entrega.estado,
+                cantidad: f.entrega.cantidad ?? 0,
+                retraso: retraso(f.entrega.desde),
+            }
+            : null,
+        fecha_solicitud: f.fecha_solicitud,
+        estado_inscripcion: f.estado_inscripcion,
+        datos: f.datos,
+    }));
 }
 
 // cuentas_beneficiarios_ed.datos: { "documentos": [{ "tipo", "nombre_archivo", "url" }] }
 export async function documentosDeBeneficiario(id) {
-  const [fila] = await sql`
+    const [fila] = await sql`
     SELECT COALESCE(datos->'documentos', '[]'::jsonb) AS documentos
     FROM cuentas_beneficiarios_ed WHERE id = ${id}`;
-  return fila ? fila.documentos : null;
+    return fila ? fila.documentos : null;
+    array.forEach(element => {
+        
+    });
 }
 
-export async function eliminarInscripcion(id, programaId) {
-  const filas = await sql`
-    DELETE FROM inscripciones_ed
-    WHERE usuario_id = ${id} AND programa_id = ${programaId}
-    RETURNING programa_id`;
-  return filas.length > 0;
+const TABLA_ESTADOS = {
+    cuenta: 'estados_cuentas_empresas_ec',
+    programa: 'estados_programa_ec',
+    inscripcion: 'estados_incripciones_ec',
+};
+
+async function idEstado(tx, catalogo, nombre) {
+    const [e] = await tx`SELECT id FROM ${tx(TABLA_ESTADOS[catalogo])} WHERE name = ${nombre}`;
+    return e?.id ?? null;
 }
 
-// Devuelve true si se creó, false si ya estaba inscrito.
-export async function crearInscripcion(id, programaId) {
-  const filas = await sql`
-    INSERT INTO inscripciones_ed (usuario_id, programa_id, fecha_solicitud, estado, datos)
-    VALUES (
-      ${id}, ${programaId}, CURRENT_DATE,
-      (SELECT id FROM estados_incripciones_ec ORDER BY id LIMIT 1), -- AJUSTAR: id del estado inicial
-      ${sql.json({ entrega: { estado: 'no_enviado', cantidad: 0 } })}::jsonb
-    )
-    ON CONFLICT (usuario_id, programa_id) DO NOTHING
-    RETURNING programa_id`;
-  return filas.length > 0;
+export function inactivarCuenta(id) {
+    return sql.begin(async (tx) => {
+        const inactiva = await idEstado(tx, 'cuenta', 'inactivada');
+        if (inactiva === null) return { estadoFaltante: 'inactivada' };
+        const [c] = await tx`SELECT estado FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
+        if (!c) return { noEncontrado: true };
+        if (c.estado === inactiva) return { yaEstaba: true };
+        await tx`UPDATE cuentas_beneficiarios_ed SET estado = ${inactiva} WHERE id = ${id}`;
+        return { ok: true };
+    });
 }
+
+export function cancelarPrograma(id) {
+    return sql.begin(async (tx) => {
+        const cancelado = await idEstado(tx, 'programa', 'cancelado_incompletado');
+        if (cancelado === null) return { estadoFaltante: 'cancelado_incompletado' };
+        const [p] = await tx`SELECT estado FROM programas_ed WHERE id = ${id} FOR UPDATE`;
+        if (!p) return { noEncontrado: true };
+        if (p.estado === cancelado) return { yaEstaba: true };
+        await tx`UPDATE programas_ed SET estado = ${cancelado} WHERE id = ${id}`;
+        return { ok: true };
+    });
+}
+
+// quien: 'retirarB' (beneficiario) o 'retirarS' (personal)
+export function retirarInscripcion(id, programaId, quien) {
+    return sql.begin(async (tx) => {
+        const nuevo = await idEstado(tx, 'inscripcion', quien);
+        if (nuevo === null) return { estadoFaltante: quien };
+        const otro = await idEstado(tx, 'inscripcion', quien === 'retirarB' ? 'retirarS' : 'retirarB');
+        const [i] = await tx`
+      SELECT estado FROM inscripciones_ed
+      WHERE usuario_id = ${id} AND programa_id = ${programaId} FOR UPDATE`;
+        if (!i) return { noEncontrado: true };
+        if (i.estado === nuevo || i.estado === otro) return { yaEstaba: true }; // ya retirada: no se reescribe quién la retiró
+        await tx`
+      UPDATE inscripciones_ed SET estado = ${nuevo}
+      WHERE usuario_id = ${id} AND programa_id = ${programaId}`;
+        return { ok: true };
+    });
+}
+
+// Inscripciones retiradas (no ocupan cupo ni cuentan en las estadísticas).
+const RETIRADAS = sql`(SELECT id FROM estados_incripciones_ec WHERE name IN ('retirarB', 'retirarS'))`;
+
+
+
+// true si se creó, false si ya estaba
+export function crearInscripcion(id, programaId) {
+    return sql.begin(async (tx) => {
+        const [pr] = await tx`
+      SELECT ep.name AS estado
+      FROM programas_ed p JOIN estados_programa_ec ep ON ep.id = p.estado
+      WHERE p.id = ${programaId}`;
+        if (!pr) return { programaNoExiste: true };
+        if (pr.estado === 'cancelado_incompletado') return { programaCancelado: true };
+
+        const filas = await tx`
+      INSERT INTO inscripciones_ed (usuario_id, programa_id, fecha_solicitud, estado, datos)
+      VALUES (
+        ${id}, ${programaId}, CURRENT_DATE,
+        3,
+        ${tx.json({ entrega: { estado: 'no_enviado', cantidad: 0 } })}::jsonb
+      )
+      ON CONFLICT (usuario_id, programa_id) DO UPDATE
+        SET estado = EXCLUDED.estado,
+            fecha_solicitud = EXCLUDED.fecha_solicitud,
+            datos = COALESCE(inscripciones_ed.datos, '{}'::jsonb) || EXCLUDED.datos
+        WHERE inscripciones_ed.estado IN ${RETIRADAS}
+      RETURNING programa_id`;
+        return { creada: filas.length > 0 };
+    });
+}
+
 
 /* ---------- Programas ---------- */
 // programas_ed.datos: { cantidad, unidad, cupos, monto, clave_correlativa,
@@ -154,7 +229,7 @@ const ENTREGA = sql`concat_ws(' · ',
   nullif(pr.datos->>'composicion', ''))`;
 
 export function listarProgramas() {
-  return sql`
+    return sql`
     SELECT pr.id,
            pr.nombre,
            pr.estado                    AS estado_id,
@@ -178,7 +253,7 @@ export function listarProgramas() {
 // Incluye los campos de la página (tipo, entrega, descripcion, cupos_maximos)
 // y los del formulario de edición.
 export async function obtenerPrograma(id) {
-  const [fila] = await sql`
+    const [fila] = await sql`
     SELECT pr.id,
            pr.nombre,
            tb.name                                  AS tipo,
@@ -216,7 +291,7 @@ export async function obtenerPrograma(id) {
     JOIN estados_programa_ec ep ON ep.id = pr.estado
     JOIN perioricidad_ec pe     ON pe.id = pr.perioricidad
     WHERE pr.id = ${id}`;
-  return fila ?? null;
+    return fila ?? null;
 }
 
 export async function estadisticasPrograma(id) {
@@ -228,7 +303,7 @@ export async function estadisticasPrograma(id) {
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'recibido')::int    AS recibidos,
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'no_enviado')::int  AS pendientes,
            count(*)::int                                                            AS cupos_ocupados
-    FROM inscripciones_ed WHERE programa_id = ${id}`;
+    FROM inscripciones_ed WHERE programa_id = ${id} AND estado NOT IN ${RETIRADAS}`;
   return { ...e, cupos_disponibles: Math.max((prog.cupos ?? 0) - e.cupos_ocupados, 0) };
 }
 
@@ -237,51 +312,54 @@ export async function estadisticasPrograma(id) {
 
 // Acepta el id (lo que envía el select cargado desde la DB) o el nombre.
 async function buscarDepartamento(tx, valor) {
-  const v = String(valor ?? '').trim();
-  const [dep] = /^\d+$/.test(v)
-    ? await tx`SELECT id FROM departamentos_ec WHERE id = ${Number(v)}`
-    : await tx`SELECT id FROM departamentos_ec WHERE lower(name) = lower(${v})`;
-  return dep ?? null;
+    const v = String(valor ?? '').trim();
+    const [dep] = /^\d+$/.test(v)
+        ? await tx`SELECT id FROM departamentos_ec WHERE id = ${Number(v)}`
+        : await tx`SELECT id FROM departamentos_ec WHERE lower(name) = lower(${v})`;
+    return dep ?? null;
 }
 
 export function crearBeneficiario(d) {
-  return sql.begin(async (tx) => {
-    const [existe] = await tx`
+    return sql.begin(async (tx) => {
+        const [existe] = await tx`
       SELECT 1 FROM cuentas_beneficiarios_ed WHERE persona_documento = ${d.documento}`;
-    if (existe) return { duplicado: true };
+        if (existe) return { duplicado: true };
 
-    const dep = await buscarDepartamento(tx, d.departamento);
-    if (!dep) return { departamentoInvalido: true };
+        const dep = await buscarDepartamento(tx, d.departamento);
+        if (!dep) return { departamentoInvalido: true };
 
-    await tx`
+        await tx`
       INSERT INTO personas_ed (documento_unico, is_dui, nombre, apellido, departamento_residencia, nacimiento)
       VALUES (${d.documento}, ${d.isDui}, ${d.nombre}, ${d.apellido}, ${dep.id}, ${d.nacimiento})
       ON CONFLICT (documento_unico) DO NOTHING`;
 
-    const [c] = await tx`
-      INSERT INTO cuentas_beneficiarios_ed (persona_documento, estado, datos)
+        const [c] = await tx`
+      INSERT INTO cuentas_beneficiarios_ed (persona_documento, estado, telefono, email, datos)
       VALUES (
         ${d.documento},
-        (SELECT id FROM estados_cuentas_empresas_ec ORDER BY id LIMIT 1), -- AJUSTAR: id del estado inicial
-        ${tx.json({ telefono: d.telefono, email: d.email, municipio: d.municipio, direccion: d.direccion })}::jsonb
+        1,
+        ${d.telefono},
+        ${d.email || null},
+        ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
       )
       RETURNING id`;
-    return { id: c.id };
-  });
+        return { id: c.id };
+    });
 }
+
 
 // El documento no se modifica (es la clave primaria de personas_ed).
 export function actualizarBeneficiario(id, d) {
-  return sql.begin(async (tx) => {
-    const [c] = await tx`
+    return sql.begin(async (tx) => {
+        const [c] = await tx`
       SELECT persona_documento FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
-    if (!c) return { noEncontrado: true };
-    if (d.documento !== c.persona_documento) return { documentoDistinto: true };
+        if (!c) return { noEncontrado: true };
+        if (d.documento !== c.persona_documento) return { documentoDistinto: true };
 
-    const dep = await buscarDepartamento(tx, d.departamento);
-    if (!dep) return { departamentoInvalido: true };
+        const dep = await buscarDepartamento(tx, d.departamento);
+        if (!dep) return { departamentoInvalido: true };
 
-    await tx`
+        await tx`
       UPDATE personas_ed
       SET nombre = ${d.nombre},
           apellido = ${d.apellido},
@@ -289,13 +367,15 @@ export function actualizarBeneficiario(id, d) {
           nacimiento = COALESCE(${d.nacimiento ?? null}::date, nacimiento)
       WHERE documento_unico = ${c.persona_documento}`;
 
-    await tx`
+        await tx`
       UPDATE cuentas_beneficiarios_ed
-      SET datos = COALESCE(datos, '{}'::jsonb)
-                  || ${tx.json({ telefono: d.telefono, email: d.email, municipio: d.municipio, direccion: d.direccion })}::jsonb
+      SET telefono = ${d.telefono},
+          email = ${d.email || null},
+          datos = COALESCE(datos, '{}'::jsonb)
+                  || ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
       WHERE id = ${id}`;
-    return { id };
-  });
+        return { id };
+    });
 }
 
 /* ---------- Escritura: programas ---------- */
@@ -304,30 +384,30 @@ export function actualizarBeneficiario(id, d) {
 //      periodo, documentos, criterios [] }
 
 const datosPrograma = (d) => ({
-  cantidad: d.cantidad,
-  unidad: d.unidad,
-  cupos: d.cupos,
-  monto: d.monto,
-  composicion: d.composicion,
-  periodo: d.periodo,
-  criterios: d.criterios,
+    cantidad: d.cantidad,
+    unidad: d.unidad,
+    cupos: d.cupos,
+    monto: d.monto,
+    composicion: d.composicion,
+    periodo: d.periodo,
+    criterios: d.criterios,
 });
 
 const claveAuto = (id) => `PRG-AGR-02-${String(id).padStart(3, '0')}`;
 
 const insertarZonas = (tx, programaId, zonas) =>
-  tx`INSERT INTO programas_departamentos_ep ${tx(
-    zonas.map((z) => ({ departamento_id: z, programa_id: programaId }))
-  )}`;
+    tx`INSERT INTO programas_departamentos_ep ${tx(
+        zonas.map((z) => ({ departamento_id: z, programa_id: programaId }))
+    )}`;
 
 export function crearPrograma(d) {
-  return sql.begin(async (tx) => {
-    if (d.clave) {
-      const [dup] = await tx`
+    return sql.begin(async (tx) => {
+        if (d.clave) {
+            const [dup] = await tx`
         SELECT 1 FROM programas_ed WHERE lower(datos->>'clave_correlativa') = lower(${d.clave})`;
-      if (dup) return { claveDuplicada: true };
-    }
-    const [p] = await tx`
+            if (dup) return { claveDuplicada: true };
+        }
+        const [p] = await tx`
       INSERT INTO programas_ed
         (nombre, entidad_responsable, estado, tipo_beneficio, descripcion_beneficio,
          fecha_inicio, fecha_final, perioricidad, documentos_registro_requiere, datos)
@@ -336,29 +416,29 @@ export function crearPrograma(d) {
          ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${d.documentos},
          ${tx.json({ ...datosPrograma(d), clave_correlativa: d.clave || null })}::jsonb)
       RETURNING id`;
-    if (!d.clave) {
-      await tx`
+        if (!d.clave) {
+            await tx`
         UPDATE programas_ed
         SET datos = datos || ${tx.json({ clave_correlativa: claveAuto(p.id) })}::jsonb
         WHERE id = ${p.id}`;
-    }
-    await insertarZonas(tx, p.id, d.zonas);
-    return { id: p.id };
-  });
+        }
+        await insertarZonas(tx, p.id, d.zonas);
+        return { id: p.id };
+    });
 }
 
 export function actualizarPrograma(id, d) {
-  return sql.begin(async (tx) => {
-    const [actual] = await tx`SELECT datos FROM programas_ed WHERE id = ${id} FOR UPDATE`;
-    if (!actual) return { noEncontrado: true };
+    return sql.begin(async (tx) => {
+        const [actual] = await tx`SELECT datos FROM programas_ed WHERE id = ${id} FOR UPDATE`;
+        if (!actual) return { noEncontrado: true };
 
-    const clave = d.clave || actual.datos?.clave_correlativa || claveAuto(id);
-    const [dup] = await tx`
+        const clave = d.clave || actual.datos?.clave_correlativa || claveAuto(id);
+        const [dup] = await tx`
       SELECT 1 FROM programas_ed
       WHERE id <> ${id} AND lower(datos->>'clave_correlativa') = lower(${clave})`;
-    if (dup) return { claveDuplicada: true };
+        if (dup) return { claveDuplicada: true };
 
-    await tx`
+        await tx`
       UPDATE programas_ed
       SET nombre = ${d.nombre},
           entidad_responsable = ${d.entidad},
@@ -372,34 +452,34 @@ export function actualizarPrograma(id, d) {
           datos = COALESCE(datos, '{}'::jsonb)
                   || ${tx.json({ ...datosPrograma(d), clave_correlativa: clave })}::jsonb
       WHERE id = ${id}`;
-
-    await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
-    await insertarZonas(tx, id, d.zonas);
-    return { id };
-  });
+        // este delete no me parece muy bien realmente, tengo que ver eso luego
+        await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
+        await insertarZonas(tx, id, d.zonas);
+        return { id };
+    });
 }
 
 // No elimina programas con beneficiarios inscritos.
-export function eliminarPrograma(id) {
-  return sql.begin(async (tx) => {
-    const [p] = await tx`SELECT id FROM programas_ed WHERE id = ${id} FOR UPDATE`;
-    if (!p) return { noEncontrado: true };
-    const [{ n }] = await tx`SELECT count(*)::int AS n FROM inscripciones_ed WHERE programa_id = ${id}`;
-    if (n > 0) return { conInscritos: true };
-    await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
-    await tx`DELETE FROM programas_ed WHERE id = ${id}`;
-    return { ok: true };
-  });
-}
+// export function eliminarPrograma(id) {
+//     return sql.begin(async (tx) => {
+//         const [p] = await tx`SELECT id FROM programas_ed WHERE id = ${id} FOR UPDATE`;
+//         if (!p) return { noEncontrado: true };
+//         const [{ n }] = await tx`SELECT count(*)::int AS n FROM inscripciones_ed WHERE programa_id = ${id}`;
+//         if (n > 0) return { conInscritos: true };
+//         await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
+//         await tx`DELETE FROM programas_ed WHERE id = ${id}`;
+//         return { ok: true };
+//     });
+// }
 
 // Todas se devuelven como { id, nombre }.
 export async function obtenerCatalogos() {
-  const [departamentos, entidades, tipos, estados, periodicidades] = await Promise.all([
-    sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
-    sql`SELECT id, nombre FROM empresas_ed ORDER BY nombre`,
-    sql`SELECT id, name AS nombre FROM tipos_beneficios_ec ORDER BY id`,
-    sql`SELECT id, name AS nombre FROM estados_programa_ec ORDER BY id`,
-    sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
-  ]);
-  return { departamentos, entidades, tipos, estados, periodicidades };
+    const [departamentos, entidades, tipos, estados, periodicidades] = await Promise.all([
+        sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
+        sql`SELECT id, nombre FROM empresas_ed ORDER BY nombre`,
+        sql`SELECT id, name AS nombre FROM tipos_beneficios_ec ORDER BY id`,
+        sql`SELECT id, name AS nombre FROM estados_programa_ec ORDER BY id`,
+        sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
+    ]);
+    return { departamentos, entidades, tipos, estados, periodicidades };
 }

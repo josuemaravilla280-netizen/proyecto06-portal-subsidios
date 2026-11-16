@@ -3,6 +3,18 @@ const { permitir } = require('../middleware/auth');
 const router = express.Router();
 const operador = permitir('admin', 'operador');
 
+const usuarioDe = (req) => req.usuario ?? req.user ?? req.session?.usuario ?? null;
+
+const conAcceso = [
+  permitir('admin', 'operador', 'beneficiario'),
+  (req, res, next) => {
+    const u = usuarioDe(req);
+    if (u && ['admin', 'operador'].includes(u.rol)) return next();
+    if (u && u.rol === 'beneficiario' && String(u.id) === req.params.id) return next();
+    res.status(403).json({ ok: false, mensaje: 'No tiene permiso para este beneficiario.' });
+  },
+];
+ 
 // getData.mjs es ESM: se carga con import() dinámico.
 const db = () => import('../data/getData.mjs');
 
@@ -61,48 +73,64 @@ router.get('/', operador, a(async (_req, res) => {
 }));
 
 // Perfil
-router.get('/:id', operador, idValido, a(async (req, res) => {
+router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
   const { obtenerBeneficiario } = await db();
   const dato = await obtenerBeneficiario(req.params.id);
   if (!dato) return noEncontrado(res);
   res.json({ ok: true, dato });
 }));
-
+ 
 // Programas en que está registrado
-router.get('/:id/programas', operador, idValido, a(async (req, res) => {
+router.get('/:id/programas', ...conAcceso, idValido, a(async (req, res) => {
   const { obtenerBeneficiario, programasDeBeneficiario } = await db();
   if (!(await obtenerBeneficiario(req.params.id))) return noEncontrado(res);
   res.json({ ok: true, datos: await programasDeBeneficiario(req.params.id) });
 }));
 
-// Registrar en otro programa
+// Registrar en otro programa (solo personal; la solicitud del beneficiario aún no está implementada)
 router.post('/:id/programas', operador, idValido, a(async (req, res) => {
   const programaId = Number(req.body.programa_id);
   if (!Number.isInteger(programaId) || programaId < 1)
     return res.status(400).json({ ok: false, mensaje: 'Programa no válido.' });
   const { crearInscripcion } = await db();
   try {
-    const creada = await crearInscripcion(req.params.id, programaId);
-    if (!creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
+    const r = await crearInscripcion(req.params.id, programaId);
+    if (r.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+    if (r.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
+    if (!r.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
     res.status(201).json({ ok: true, mensaje: 'Beneficiario registrado en el programa.' });
   } catch (e) {
-    if (e.code === '23503') return res.status(404).json({ ok: false, mensaje: 'Beneficiario o programa no encontrado.' });
+    if (e.code === '23503') return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
     throw e;
   }
 }));
 
-// Sacar de un programa
-router.delete('/:id/programas/:programaId', operador, idValido, a(async (req, res) => {
+// Retirar de un programa: no borra la inscripción, cambia su estado.
+// 'retirarB' si lo hace el propio beneficiario, 'retirarS' si lo hace el personal.
+router.delete('/:id/programas/:programaId', ...conAcceso, idValido, a(async (req, res) => {
   const programaId = Number(req.params.programaId);
   if (!Number.isInteger(programaId)) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-  const { eliminarInscripcion } = await db();
-  if (!(await eliminarInscripcion(req.params.id, programaId)))
-    return res.status(404).json({ ok: false, mensaje: 'Inscripción no encontrada.' });
-  res.json({ ok: true, mensaje: 'Beneficiario retirado del programa.' });
+  const quien = usuarioDe(req)?.rol === 'beneficiario' ? 'retirarB' : 'retirarS';
+  const { retirarInscripcion } = await db();
+  const r = await retirarInscripcion(req.params.id, programaId, quien);
+  if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+  if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Inscripción no encontrada.' });
+  if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La inscripción ya fue retirada.' });
+  res.json({ ok: true, mensaje: 'Inscripción retirada.' });
+}));
+ 
+// Inactivar cuenta: no borra al beneficiario, cambia el estado de su cuenta a 'inactivada'.
+router.delete('/:id', operador, idValido, a(async (req, res) => {
+  const { inactivarCuenta } = await db();
+  const r = await inactivarCuenta(req.params.id);
+  if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+  if (r.noEncontrado) return noEncontrado(res);
+  if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está inactivada.' });
+  res.json({ ok: true, mensaje: 'Cuenta inactivada.' });
 }));
 
 // Documentos subidos
-router.get('/:id/documentos', operador, idValido, a(async (req, res) => {
+router.get('/:id/documentos', ...conAcceso, idValido, a(async (req, res) => {
   const { documentosDeBeneficiario } = await db();
   const datos = await documentosDeBeneficiario(req.params.id);
   if (!datos) return noEncontrado(res);
@@ -122,7 +150,7 @@ router.post('/', operador, a(async (req, res) => {
 }));
 
 // Actualizar beneficiario
-router.put('/:id', operador, idValido, a(async (req, res) => {
+router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
   const d = limpiar(req.body);
   const error = validar(d, false);
   if (error) return res.status(400).json({ ok: false, mensaje: error });

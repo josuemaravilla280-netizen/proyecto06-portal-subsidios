@@ -3,6 +3,17 @@ const ID = new URLSearchParams(location.search).get('id');
 const API = `/api/beneficiarios/${encodeURIComponent(ID)}`;
 const $ = (id) => document.getElementById(id);
 
+let usuario = null; // sesión actual (/api/auth/me)
+let perfil = null;  // datos cargados del beneficiario
+const esStaff = () => ['admin', 'operador'].includes(usuario?.rol);
+
+// Estados de inscripción que indican quién la retiró (no se borra ningún registro).
+const RETIROS = {
+    retirarB: 'Retirado por el beneficiario',
+    retirarS: 'Retirado por el personal',
+};
+
+// common.js
 function aviso(texto, tipo = 'error') {
     const m = $('mensaje');
     m.textContent = texto;
@@ -93,7 +104,10 @@ function abrirSeguro(url) {
 async function cargarUsuario() {
     try {
         const r = await pedir('/api/auth/me');
-        if (r.usuario) $('datosUsuario').textContent = `${r.usuario.nombre} · Rol: ${r.usuario.rol}`;
+        if (r.usuario) {
+            usuario = r.usuario;
+            $('datosUsuario').textContent = `${r.usuario.nombre} · Rol: ${r.usuario.rol}`;
+        }
     } catch { /* sin sesión: las demás solicitudes mostrarán el error */ }
 }
 
@@ -109,21 +123,21 @@ function sinImagen() {
 
 async function cargarPerfil() {
     const p = await pedir(API);
+    perfil = p;
     $('pNombre').textContent = p.nombre ?? '';
     $('pUbicacion').textContent = [p.departamento, p.municipio].filter(Boolean).join(' / ');
     $('pDireccion').textContent = p.direccion ?? '';
     $('pEdad').textContent = p.edad ?? '';
+    $('pDocumento').textContent = p.numero_documento ?? '';
+    $('pPasaporte').textContent = p.numero_pasaporte ?? '';
     $('pNacimiento').textContent = formatear(p.fecha_nacimiento);
+    $('pTelefono').textContent = formatear(p.telefono);
+    $('pCorreo').textContent = formatear(p.correo);
     $('pEstadoCuenta').textContent = formatear(p.estado_cuenta);
-    const doc = (p.numero_documento ?? '').trim();
-    const pas = (p.numero_pasaporte ?? '').trim();
-    $('pDocumento').textContent = doc;
-    $('pPasaporte').textContent = pas;
-    $('pDocumento').closest('li').style.display = doc ? '' : 'none';
-    $('pPasaporte').closest('li').style.display = pas ? '' : 'none';
     // Lo ya mostrado en otras partes de la página no se repite.
     llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
+    $('btnInactivar').classList.toggle('oculto', !(esStaff() && p.estado_cuenta !== 'inactivada'));
 
     const img = $('imgDocumento');
     if (p.imagen_documento) {
@@ -158,17 +172,23 @@ async function cargarProgramas() {
         celda(tr, p.estado, claseEstado(p.estado));
         celda(tr, textoEntrega(p.entrega));
         const td = document.createElement('td');
-        const b = document.createElement('button');
-        b.className = 'btn';
-        b.textContent = 'Eliminar';
-        b.onclick = async () => {
-            if (!confirm(`¿Sacar al beneficiario de "${p.nombre}"?`)) return;
-            try {
-                await pedir(`${API}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
-                await cargarProgramas();
-            } catch (e) { aviso(e.message); }
-        };
-        td.appendChild(b);
+        const retiro = RETIROS[p.estado_inscripcion];
+        if (retiro) {
+            td.textContent = retiro; // inscripción ya retirada: se conserva con su estado
+        } else if (puedeEditar()) { // personal, o el beneficiario en su propio perfil
+            const b = document.createElement('button');
+            b.className = 'btn';
+            b.textContent = 'Retirar';
+            b.onclick = async () => {
+                if (!confirm(`¿Retirar la inscripción en "${p.nombre}"?`)) return;
+                try {
+                    const r = await pedir(`${API}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+                    await cargarProgramas();
+                    aviso(r.mensaje || 'Inscripción retirada.', 'exito');
+                } catch (e) { aviso(e.message); }
+            };
+            td.appendChild(b);
+        }
         tr.appendChild(td);
         tbody.appendChild(tr);
 
@@ -183,7 +203,7 @@ async function cargarProgramas() {
         ul.className = 'datos-lista';
         llenarLista(ul, [
             ['Fecha de solicitud', formatear(p.fecha_solicitud)],
-            ['Estado de la inscripción', formatear(p.estado_inscripcion)],
+            ['Estado de la inscripción', formatear(RETIROS[p.estado_inscripcion] ?? p.estado_inscripcion)],
             ...aplanar(p.datos, ['entrega.estado', 'entrega.cantidad']),
         ]);
         det.append(sum, ul);
@@ -191,6 +211,7 @@ async function cargarProgramas() {
         trDet.appendChild(tdDet);
         tbody.appendChild(trDet);
     });
+    if (!esStaff()) return; // solo el personal registra en programas
 
     // Última fila: registrar en otro programa
     const tr = document.createElement('tr');
@@ -202,7 +223,7 @@ async function cargarProgramas() {
     btn.style.width = 'auto';
     btn.style.padding = '0 16px';
     btn.textContent = 'Registrar en otro programa';
-    btn.onclick = () => mostrarSelector(td, programas);
+    btn.onclick = () => mostrarSelector(td, programas.filter((p) => !RETIROS[p.estado_inscripcion]));
     td.appendChild(btn);
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -213,7 +234,7 @@ async function mostrarSelector(td, actuales) {
     try {
         const todos = await pedir('/api/programas');
         const ids = new Set(actuales.map((p) => String(p.id)));
-        const disponibles = todos.filter((p) => !ids.has(String(p.id)));
+        const disponibles = todos.filter((p) => !ids.has(String(p.id)) && p.estado !== 'cancelado_incompletado');
         td.replaceChildren();
         if (!disponibles.length) { td.textContent = 'No hay más programas disponibles.'; return; }
         const sel = document.createElement('select');
@@ -264,11 +285,77 @@ async function cargarDocumentos() {
     });
 }
 
+/* ---------- Edición ---------- */
+// Personal: cualquier beneficiario. Beneficiario: solo el suyo (si /me informa el id se compara;
+// si no, lo decide el servidor con 403).
+function puedeEditar() {
+    if (!usuario) return false;
+    if (esStaff()) return true;
+    return usuario.rol === 'beneficiario' && (usuario.id === undefined || String(usuario.id) === ID);
+}
+
+async function abrirEdicion() {
+    if (!perfil) return;
+    try {
+        await cargarCatalogos();
+    } catch (e) { return aviso(e.message); }
+
+    const d = {
+        id: ID,
+        nombre: perfil.nombres,
+        apellido: perfil.apellido,
+        documento_unico: perfil.documento_unico,
+        nacimiento: perfil.fecha_nacimiento,
+        telefono: perfil.telefono,
+        correo: perfil.correo,
+        departamento_id: perfil.departamento_id,
+        municipio: perfil.municipio,
+        direccion: perfil.direccion,
+    };
+
+    const panel = $('panelEdicion');
+    panel.innerHTML = `<h2>Editar beneficiario</h2>${formBeneficiario(d)}`;
+    panel.classList.remove('oculto');
+    $('formBeneficiario').addEventListener('submit', guardarBeneficiario);
+    $('cancelarBeneficiario').addEventListener('click', cerrarEdicion);
+    panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function cerrarEdicion() {
+    const panel = $('panelEdicion');
+    panel.classList.add('oculto');
+    panel.replaceChildren();
+}
+
+async function guardarBeneficiario(e) {
+    e.preventDefault();
+    try {
+        const r = await enviarJSON(API, 'PUT', valoresFormulario(e.currentTarget));
+        cerrarEdicion();
+        await cargarPerfil();
+        aviso(r.mensaje || 'Información actualizada.', 'exito');
+    } catch (err) { aviso(err.message); }
+}
+
+$('btnEditar').onclick = abrirEdicion;
+
+// No se elimina la cuenta: su estado pasa a 'inactivada'.
+$('btnInactivar').onclick = async () => {
+    if (!confirm('¿Inactivar la cuenta de este beneficiario?')) return;
+    try {
+        const r = await pedir(API, { method: 'DELETE' });
+        await cargarPerfil();
+        aviso(r.mensaje || 'Cuenta inactivada.', 'exito');
+    } catch (e) { aviso(e.message); }
+};
 $('btnCerrar').onclick = () => window.close();
 
 if (!ID) {
     aviso('Falta el ID del beneficiario.');
 } else {
-    cargarUsuario();
-    Promise.all([cargarPerfil(), cargarProgramas(), cargarDocumentos()]).catch((e) => aviso(e.message));
+    (async () => {
+        await cargarUsuario(); // el rol define qué botones se muestran
+        if (puedeEditar()) $('btnEditar').classList.remove('oculto');
+        await Promise.all([cargarPerfil(), cargarProgramas(), cargarDocumentos()]);
+    })().catch((e) => aviso(e.message));
 }

@@ -12,7 +12,7 @@ let usuarioActual = null;
 let programaEditando = null;
 let beneficiarioEditando = null;
 
-// Evita que los valores ingresados se interpreten como HTML.
+// common.js
 function escapar(valor = '') {
     return String(valor).replace(/[&<>"']/g, (c) => ({
         '&': '&amp;',
@@ -23,6 +23,7 @@ function escapar(valor = '') {
     })[c]);
 }
 
+// common.js
 // Muestra un mensaje de error o de éxito.
 function mensaje(elemento, texto, tipo = 'error') {
     elemento.textContent = texto;
@@ -140,11 +141,7 @@ function construirMenu() {
             'Beneficiarios',
             ['admin', 'operador'].includes(usuarioActual.rol)
         ],
-        [
-            'programas',
-            'Programas',
-            usuarioActual.rol === 'admin'
-        ]
+        ['programas','Programas',true]
     ];
 
     // Crea solamente las opciones permitidas para el usuario.
@@ -895,9 +892,9 @@ async function cargarProgramas() {
 
                   <button
                     class="btn"
-                    data-eliminar-programa="${p.id}"
+                    data-cancelar-programa="${p.id}"
                   >
-                    Eliminar
+                    Cancelar
                   </button>
                 </div>
               </td>
@@ -916,10 +913,10 @@ async function cargarProgramas() {
                 });
             });
         // Asigna la acción de eliminación a cada programa.
-        cont.querySelectorAll('[data-eliminar-programa]')
+        cont.querySelectorAll('[data-cancelar-programa]')
             .forEach((boton) => {
                 boton.addEventListener('click', () => {
-                    eliminarPrograma(Number(boton.dataset.eliminarPrograma));
+                    cancelarPrograma(Number(boton.dataset.cancelarPrograma));
                 });
             });
     } catch (err) {
@@ -961,8 +958,8 @@ async function editarPrograma(id) {
 }
 
 // Elimina un programa después de confirmar la acción.
-async function eliminarPrograma(id) {
-    if (!confirm('¿Está seguro de eliminar este programa?')) {
+async function cancelarPrograma(id) {
+    if (!confirm('¿Está seguro de cancelar este programa?')) {
         return;
     }
 

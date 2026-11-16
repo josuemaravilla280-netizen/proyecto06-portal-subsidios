@@ -2,6 +2,7 @@ const express = require('express');
 const { permitir } = require('../middleware/auth');
 const router = express.Router();
 const admin = permitir('admin');
+const lectura = permitir('admin', 'operador', 'beneficiario');
 
 // getData.mjs es ESM: se carga con import() dinámico.
 const db = () => import('../data/getData.mjs');
@@ -84,13 +85,13 @@ const idValido = (req, res, next) => {
 };
 
 // Lista (nombres para la página de listado)
-router.get('/', admin, a(async (_req, res) => {
+router.get('/', lectura, a(async (_req, res) => {
     const { listarProgramas } = await db();
     res.json({ ok: true, datos: await listarProgramas() });
 }));
 
 // Información del programa
-router.get('/:id', admin, idValido, a(async (req, res) => {
+router.get('/:id', lectura, idValido, a(async (req, res) => {
     const { obtenerPrograma } = await db();
     const dato = await obtenerPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
@@ -98,7 +99,7 @@ router.get('/:id', admin, idValido, a(async (req, res) => {
 }));
 
 // Datos de los gráficos de pastel
-router.get('/:id/estadisticas', admin, idValido, a(async (req, res) => {
+router.get('/:id/estadisticas', lectura, idValido, a(async (req, res) => {
     const { estadisticasPrograma } = await db();
     const dato = await estadisticasPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
@@ -132,16 +133,13 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
     });
 }));
 
-// Eliminar programa
 router.delete('/:id', admin, idValido, a(async (req, res) => {
-    const { eliminarPrograma } = await db();
-    const r = await eliminarPrograma(req.programaId);
-    if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-    if (r.conInscritos) return res.status(409).json({ ok: false, mensaje: 'El programa tiene beneficiarios inscritos.' });
-    res.json({
-         ok: true,
-         mensaje: 'Programa eliminado.'
-        });
+  const { cancelarPrograma } = await db();
+  const r = await cancelarPrograma(req.programaId);
+  if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+  if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+  if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
+  res.json({ ok: true, mensaje: 'Programa cancelado.' });
 }));
 
 module.exports = router;
