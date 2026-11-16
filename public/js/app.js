@@ -165,6 +165,7 @@ function construirMenu() {
         if (id === 'inicio') inicio();
         if (id === 'beneficiarios') vistaBeneficiarios();
         if (id === 'programas') vistaProgramas();
+
       });
 
       menu.appendChild(boton);
@@ -343,6 +344,7 @@ function formBeneficiario(d = {}) {
     </form>
   `;
 }
+
 
 // Obtiene los valores ingresados en un formulario.
 function valoresFormulario(form) {
@@ -1026,7 +1028,7 @@ document.querySelectorAll('[data-static]').forEach((enlace) => {
 
     alert(
       'Página informativa pendiente de elaboración; ' +
-      'no forma parte de las ocho HU de este Sprint.'
+      'no forma parte de este Sprint.'
     );
   });
 });
@@ -1112,3 +1114,32 @@ selectAllCheckbox.addEventListener('change', calcularDashboard);
 
 // Lanzamiento inicial del componente
 calcularDashboard();
+
+
+//HU12: Ingresar datos de entrega
+document.addEventListener('DOMContentLoaded', () => {
+    const check1 = document.getElementById('check1');
+    const check2 = document.getElementById('check2');
+    const check3 = document.getElementById('check3');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+
+    // Evalúa si todas las validaciones obligatorias están listas
+    function evaluarCampos() {
+        if (check1.checked && check2.checked && check3.checked) {
+            btnConfirmar.removeAttribute('disabled');
+        } else {
+            btnConfirmar.setAttribute('disabled', 'true');
+        }
+    }
+
+    // Escuchar eventos de cambio en los checkbox
+    check1.addEventListener('change', evaluarCampos);
+    check2.addEventListener('change', evaluarCampos);
+    check3.addEventListener('change', evaluarCampos);
+
+    // Simulación del gestor de carga de archivos
+    uploadPlaceholder.addEventListener('click', () => {
+        alert('Simulación: Abriendo ventana del sistema para adjuntar comprobante de retiro.');
+    });
+});
