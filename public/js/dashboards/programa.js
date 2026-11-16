@@ -185,3 +185,4 @@ if (!ID) {
     cargarUsuario();
     Promise.all([cargarInfo(), cargarGraficos()]).catch((e) => aviso(e.message));
 }
+setInterval(cargarGraficos, 10000);
