@@ -287,3 +287,31 @@ function valoresPrograma(form) {
   datos.criterios = [...form.querySelectorAll('input[name="criterios"]:checked')].map((c) => c.value);
   return datos;
 }
+
+// app.js:819
+function addEditarButton(text,id){ 
+    return `
+                  <button
+                    class="btn"
+                    data-editar-${text}="${id}"
+                  >
+                    ${(usuarioActual.rol == "admin")|| (usuarioActual.rol =="operador" &&text=="beneficiario") ? "Editar" : "ver"}
+                  </button>`
+}
+function addCancelarButton(id){ 
+    return `                  <button
+                    class="btn"
+                    data-cancelar-programa="${id}"
+                  >
+                    Cancelar
+                  </button>`
+}
+function addSolicitarButton(id){ 
+    return `
+                  <button
+                    class="btn"
+                    solicitar-inscripcion-en-programa="${id}"
+                  >
+                    Solicitar
+                  </button>`
+}
