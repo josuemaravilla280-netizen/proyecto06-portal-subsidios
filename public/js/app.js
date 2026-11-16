@@ -174,12 +174,6 @@ function inicio() {
 
     <p>
       Ha iniciado sesión correctamente.
-      Las opciones disponibles dependen de su rol.
-    </p>
-
-    <p class="notice">
-      Sprint 1: los registros son temporales y se perderán
-      al reiniciar el servidor.
     </p>
   `;
 
@@ -209,7 +203,7 @@ async function vistaBeneficiarios() {
     <h2>Registro de beneficiarios</h2>
 
     <p>
-      HU03, HU04 y HU05 · Complete los datos personales
+      Complete los datos personales
       para registrar o actualizar un beneficiario.
     </p>
 
@@ -930,8 +924,7 @@ document.querySelectorAll('[data-static]').forEach((enlace) => {
         e.preventDefault();
 
         alert(
-            'Página informativa pendiente de elaboración; ' +
-            'no forma parte de las ocho HU de este Sprint.'
+            'Página informativa pendiente de elaboración; '
         );
     });
 });
