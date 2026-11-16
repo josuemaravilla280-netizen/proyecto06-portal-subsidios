@@ -165,6 +165,15 @@ function construirMenu() {
 
             menu.appendChild(boton);
         });
+
+    //     if (id === 'inicio') inicio();
+    //     if (id === 'beneficiarios') vistaBeneficiarios();
+    //     if (id === 'programas') vistaProgramas();
+
+    //   });
+
+    //   menu.appendChild(boton);
+    // });
 }
 
 // Muestra la pantalla principal.
@@ -352,6 +361,7 @@ function formBeneficiario(d = {}) {
     </form>
   `;
 }
+
 
 // Obtiene los valores ingresados en un formulario.
 function valoresFormulario(form) {
@@ -995,9 +1005,120 @@ document.querySelectorAll('[data-static]').forEach((enlace) => {
     enlace.addEventListener('click', (e) => {
         e.preventDefault();
 
-        alert(
-            'Página informativa pendiente de elaboración; ' +
-            'no forma parte de las ocho HU de este Sprint.'
-        );
+    alert(
+      'Página informativa pendiente de elaboración; ' +
+      'no forma parte de este Sprint.'
+    );
+  });
+});
+
+// Dataset exacto mapeando la interfaz visual de la imagen
+const beneficiarios = [
+    { id: "BEN-1051", localidad: "Valle Norte", elegible: true, status: "Sin duplicado" },
+    { id: "BEN-1052", localidad: "Río Claro", elegible: true, status: "Sin duplicado" },
+    { id: "BEN-1053", localidad: "Valle Norte", elegible: true, status: "Sin duplicado" },
+    { id: "BEN-1042", localidad: "Valle Norte", elegible: false, status: "G-026-0184 existe" },
+    { id: "BEN-1043", localidad: "Valle Norte", elegible: false, status: "Falta documento", label: "Por validar" }
+];
+
+const tbody = document.getElementById('beneficiarios-body');
+const selectAllCheckbox = document.getElementById('select-all');
+
+// Indicadores globales del Dashboard
+const seleccionPreparadaEl = document.getElementById('seleccion-preparada');
+const tableSelectedCountEl = document.getElementById('table-selected-count');
+const cuposDisponiblesEl = document.getElementById('cupos-disponibles');
+
+// Elementos del panel de resumen lateral
+const summaryPersonas = document.getElementById('summary-personas');
+const summaryUnidades = document.getElementById('summary-unidades');
+const summaryPosteriores = document.getElementById('summary-posteriores');
+const btnCount = document.getElementById('btn-count');
+
+const CUPOS_DISPONIBLES_INICIAL = 120;
+const TOTAL_ELEGIBLES_LOTE = 24; // El conteo simulado total del lote según la imagen
+
+function renderizarTabla(isMasterChecked) {
+    tbody.innerHTML = beneficiarios.map(p => {
+        if (p.elegible) {
+            // Filas válidas con texto dinámico basado en el checkbox maestro
+            return `
+                <tr>
+                    <td><strong>${p.id}</strong></td>
+                    <td>${p.localidad}</td>
+                    <td><span class="badge-pill"></span></td>
+                    <td>${p.status}</td>
+                    <td class="status-included">${isMasterChecked ? '✓ Incluido' : 'Excluido'}</td>
+                </tr>
+            `;
+        } else {
+            // Filas inválidas (Bloqueadas estéticamente como la captura original)
+            return `
+                <tr class="row-disabled">
+                    <td><strong>${p.id}</strong></td>
+                    <td>${p.localidad}</td>
+                    <td>${p.label ? `<span class="badge-warning">${p.label}</span>` : '<span class="badge-pill" style="opacity:0.3"></span>'}</td>
+                    <td>${p.status}</td>
+                    <td class="status-excluded">Excluido</td>
+                </tr>
+            `;
+        }
+    }).join('');
+}
+
+function calcularDashboard() {
+    const estaActivo = selectAllCheckbox.checked;
+    
+    // Si está marcado, se seleccionan los 24 correctos. Si no, 0.
+    const conteoSeleccionado = estaActivo ? TOTAL_ELEGIBLES_LOTE : 0;
+    const cuposRestantes = CUPOS_DISPONIBLES_INICIAL - conteoSeleccionado;
+
+    // 1. Actualizar indicadores numéricos superiores
+    seleccionPreparadaEl.innerText = conteoSeleccionado;
+    tableSelectedCountEl.innerText = estaActivo ? "3" : "0"; // Muestra filas visibles válidas activas
+    cuposDisponiblesEl.innerText = cuposRestantes;
+
+    // 2. Actualizar sección derecha de Resumen de aprobación
+    summaryPersonas.innerText = `${conteoSeleccionado} seleccionadas`;
+    summaryUnidades.innerText = `${conteoSeleccionado} recargas`;
+    summaryPosteriores.innerText = `${cuposRestantes} disponibles`;
+    btnCount.innerText = conteoSeleccionado;
+
+    // Re-renderizar los textos de estado en la tabla (✓ Incluido / Excluido)
+    renderizarTabla(estaActivo);
+}
+
+// Evento controlador al interactuar con el Checkbox Principal
+selectAllCheckbox.addEventListener('change', calcularDashboard);
+
+// Lanzamiento inicial del componente
+calcularDashboard();
+
+
+//HU12: Ingresar datos de entrega
+document.addEventListener('DOMContentLoaded', () => {
+    const check1 = document.getElementById('check1');
+    const check2 = document.getElementById('check2');
+    const check3 = document.getElementById('check3');
+    const btnConfirmar = document.getElementById('btnConfirmar');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+
+    // Evalúa si todas las validaciones obligatorias están listas
+    function evaluarCampos() {
+        if (check1.checked && check2.checked && check3.checked) {
+            btnConfirmar.removeAttribute('disabled');
+        } else {
+            btnConfirmar.setAttribute('disabled', 'true');
+        }
+    }
+
+    // Escuchar eventos de cambio en los checkbox
+    check1.addEventListener('change', evaluarCampos);
+    check2.addEventListener('change', evaluarCampos);
+    check3.addEventListener('change', evaluarCampos);
+
+    // Simulación del gestor de carga de archivos
+    uploadPlaceholder.addEventListener('click', () => {
+        alert('Simulación: Abriendo ventana del sistema para adjuntar comprobante de retiro.');
     });
 });
