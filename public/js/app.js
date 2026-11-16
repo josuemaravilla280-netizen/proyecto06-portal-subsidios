@@ -428,13 +428,7 @@ async function cargarBeneficiarios() {
               </td>
 
               <td>
-                <button
-                  class="btn"
-                  data-editar-beneficiario="${b.id}"
-                >
-                  Editar
-                </button>
-              </td>
+                ${usuarioActual.rol != "beneficiario" ? addEditarButton("beneficiario",b.id):""}
             </tr>
           `).join('')}
         </tbody>
@@ -459,65 +453,22 @@ async function cargarBeneficiarios() {
     }
 }
 
-// Busca un beneficiario y carga sus datos para editarlos.
-async function editarBeneficiario(id) {
-    try {
-        const r = await api('/api/beneficiarios');
-        const d = r.datos.find((elemento) => elemento.id === id);
-
-        if (!d) return;
-
-        beneficiarioEditando = id;
-
-        vista.innerHTML = `
-      <h2>Actualizar beneficiario</h2>
-
-      <p>HU05 · Modifique los campos necesarios.</p>
-
-      ${formBeneficiario(d)}
-
-      <div
-        class="tabla-contenedor"
-        id="tablaBeneficiarios"
-      ></div>
-    `;
-
-        $('#formBeneficiario').addEventListener(
-            'submit',
-            guardarBeneficiario
-        );
-
-        $('#limpiarBeneficiario').addEventListener(
-            'click',
-            () => vistaBeneficiarios()
-        );
-
-        await cargarBeneficiarios();
-    } catch (err) {
-        mostrarMensajeVista(err.message);
-    }
-}
-
+// Aqui estaba la funcion `editarBeneficiario`
 
 // Muestra el formulario y la tabla de programas.
 async function vistaProgramas() {
     programaEditando = null;
 
     vista.innerHTML = `
-    <h2>Gestión de programas de subsidios</h2>
-
-    <p>
-      HU06, HU07 y HU08 · Cree y administre los programas de ayuda.
-    </p>
-
-    ${formPrograma()}
+    ${usuarioActual.rol == "admin" ?`    <h2>Gestión de programas de subsidios</h2>`:``}
+    ${usuarioActual.rol == "admin" ?formPrograma() : ""}
 
     <div class="tabla-contenedor" id="tablaProgramas"></div>
   `;
 
-    $('#formPrograma').addEventListener('submit', guardarPrograma);
+    $('#formPrograma')?.addEventListener('submit', guardarPrograma);
 
-    $('#cancelarPrograma').addEventListener('click', () => {
+    $('#cancelarPrograma')?.addEventListener('click', () => {
         programaEditando = null;
         vistaProgramas();
     });
@@ -525,7 +476,7 @@ async function vistaProgramas() {
     await cargarProgramas();
 }
 
-// Construye el formulario de creación o edición de programas.
+// Construye el formulario de creación de programas.
 function formPrograma(d = {}) {
     const unidades = [
         'Paquete / kit',
@@ -740,12 +691,6 @@ function formPrograma(d = {}) {
         </div>
       </section>
 
-      <p class="notice">
-        Control de duplicados: los registros se mantienen únicamente
-        durante esta ejecución del servidor. La persistencia se
-        desarrollará en el Sprint 2.
-      </p>
-
       <div class="actions">
         <button type="submit" class="btn-primario">
           ${d.id ? 'Guardar cambios' : 'Crear programa'}
@@ -833,6 +778,34 @@ async function guardarPrograma(e) {
     }
 }
 
+// formularios.js
+function addEditarButton(text,id){ 
+    return `
+                  <button
+                    class="btn"
+                    data-editar-${text}="${id}"
+                  >
+                    ${(usuarioActual.rol == "admin")|| (usuarioActual.rol =="operador" &&text=="beneficiario") ? "Editar" : "ver"}
+                  </button>`
+}
+function addCancelarButton(id){ 
+    return `                  <button
+                    class="btn"
+                    data-cancelar-programa="${id}"
+                  >
+                    Cancelar
+                  </button>`
+}
+function addSolicitarButton(id){ 
+    return `
+                  <button
+                    class="btn"
+                    solicitar-inscripcion-en-programa="${id}"
+                  >
+                    Solicitar
+                  </button>`
+}
+
 // Consulta y muestra todos los programas registrados.
 async function cargarProgramas() {
     try {
@@ -883,19 +856,11 @@ async function cargarProgramas() {
 
               <td>
                 <div class="acciones-fila">
-                  <button
-                    class="btn"
-                    data-editar-programa="${p.id}"
-                  >
-                    Editar
-                  </button>
-
-                  <button
-                    class="btn"
-                    data-cancelar-programa="${p.id}"
-                  >
-                    Cancelar
-                  </button>
+                  ${addEditarButton("programa",p.id)}
+                  
+                  ${usuarioActual.rol == "admin" ? addCancelarButton(p.id):""}
+                  
+                  ${usuarioActual.rol == "beneficiario" ? addSolicitarButton(p.id):""}
                 </div>
               </td>
             </tr>
@@ -924,38 +889,7 @@ async function cargarProgramas() {
     }
 }
 
-// Busca un programa y carga sus datos para editarlos.
-async function editarPrograma(id) {
-    try {
-        const r = await api('/api/programas');
-        const d = r.datos.find((elemento) => elemento.id === id);
-
-        if (!d) return;
-
-        programaEditando = id;
-
-        vista.innerHTML = `
-      <h2>Editar programa</h2>
-
-      <p>HU07 · Actualice la información del programa.</p>
-
-      ${formPrograma(d)}
-
-      <div class="tabla-contenedor" id="tablaProgramas"></div>
-    `;
-
-        $('#formPrograma').addEventListener('submit', guardarPrograma);
-
-        $('#cancelarPrograma').addEventListener('click', () => {
-            programaEditando = null;
-            vistaProgramas();
-        });
-
-        await cargarProgramas();
-    } catch (err) {
-        mostrarMensajeVista(err.message);
-    }
-}
+// Aqui estaba la funcion `editarPrograma`
 
 // Elimina un programa después de confirmar la acción.
 async function cancelarPrograma(id) {
