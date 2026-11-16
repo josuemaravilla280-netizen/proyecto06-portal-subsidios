@@ -3,6 +3,11 @@ CREATE TABLE departamentos_ec (
     id   SERIAL PRIMARY KEY,
     name VARCHAR(16) NOT NULL
 );
+CREATE TABLE municipios_ec (
+    id   SERIAL PRIMARY KEY,
+    departamento INTEGER NOT NULL REFERENCES departamentos_ec(id),
+    name VARCHAR(19) NOT NULL
+);
 
 CREATE TABLE roles_ec (
     id   SERIAL PRIMARY KEY,
@@ -43,6 +48,7 @@ CREATE TABLE personas_ed (
     nombre                  VARCHAR(250) NOT NULL,
     apellido                VARCHAR(250) NOT NULL,
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
+    municipio_residencia    INTEGER NOT NULL REFERENCES municipios_ec(id),
     nacimiento              DATE NOT NULL
 );
 
@@ -118,6 +124,7 @@ CREATE TABLE tiny_log(
 
 -- Inserts de catalogos --
 INSERT INTO departamentos_ec (name) VALUES ('Ahuachapán'),('Cabañas'),('Chalatenango'),('Cuscatlán'),('La Libertad'),('Morazán'),('La Paz'),('Santa Ana'),('San Miguel'),('San Salvador'),('San Vicente'),('Sonsonate'),('La Unión'),('Usulután');
+INSERT INTO municipios_ec (departamento, name) VALUES (1,'Ahuachapán Norte'),(1,'Ahuachapán Centro'),(1,'Ahuachapán Sur'),(2,'Cabañas Este'),(2,'Cabañas Oeste'),(3,'Chalatenango Norte'),(3,'Chalatenango Centro'),(3,'Chalatenango Sur'),(4,'Cuscatlán Norte'),(4,'Cuscatlán Sur'),(5,'La Libertad Norte'),(5,'La Libertad Centro'),(5,'La Libertad Oeste'),(5,'La Libertad Este'),(5,'La Libertad Costa'),(5,'La Libertad Sur'),(7,'La Paz Oeste'),(7,'La Paz Centro'),(7,'La Paz Este'),(13,'La Unión Norte'),(13,'La Unión Sur'),(6,'Morazán Norte'),(6,'Morazán Sur'),(9,'San Miguel Norte'),(9,'San Miguel Centro'),(9,'San Miguel Oeste'),(10,'San Salvador Norte'),(10,'San Salvador Oeste'),(10,'San Salvador Este'),(10,'San Salvador Centro'),(10,'San Salvador Sur'),(11,'San Vicente Norte'),(11,'San Vicente Sur'),(8,'Santa Ana Norte'),(8,'Santa Ana Centro'),(8,'Santa Ana Este'),(8,'Santa Ana Oeste'),(12,'Sonsonate Norte'),(12,'Sonsonate Centro'),(12,'Sonsonate Este'),(12,'Sonsonate Oeste'),(14,'Usulután Norte'),(14,'Usulután Este'),(14,'Usulután Oeste');
 INSERT INTO estados_cuentas_empresas_ec (name) VALUES ('activa'),('inactivada'),('eliminada');
 INSERT INTO estados_incripciones_ec (name) VALUES ('enespera'),('denegada'),('aprovada'),('retirarS'),('retirarB');--Los 2 retirar representan si lo elimino una cuenta staff o cuenta beneficiario--
 INSERT INTO estados_programa_ec (name) VALUES ('activo'),('cancelado_incompletado'),('finalizado'),('eliminado');
