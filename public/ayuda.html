@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Ayuda - Portal de Subsidia</title>
+    <link rel="stylesheet" href="./css/estilosayuda.css">
+</head>
+
+<body>
+
+    <!-- SECCIÓN HERO / BUSCADOR -->
+    <header class="hero">
+        <div class="hero-content">
+            <h1>¿Cómo podemos ayudarte?</h1>
+            <p>Encuentra respuestas y orientación para usar el Portal de Subsidia.</p>
+
+            <div class="hero-flex">
+                <div class="search-box-wrapper">
+                    <div class="search-form-row">
+                        <div class="search-input-container">
+                            <span class="search-icon">🔍</span>
+                            <input type="text" id="help-search" placeholder="Escribe tu pregunta o palabra clave">
+                        </div>
+                        <button type="button" class="search-btn">Buscar</button>
+                    </div>
+                </div>
+
+                <div class="search-help-box">
+                    <strong>CENTRO DE AYUDA</strong>
+                </div>
+            </div>
+
+            <div class="frequent-searches">
+                <span>Búsquedas frecuentes:</span>
+                <span class="tag">Recuperar contraseña</span>
+                <span class="tag">Estado de mi solicitud</span>
+                <span class="tag">Próxima entrega</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="main-container">
+
+        <!-- 1. CATEGORÍAS -->
+        <section class="help-section">
+            <h2 class="section-title">Explora por categoría</h2>
+            <p class="section-subtitle">Encuentra la información que necesitas según tu consulta.</p>
+
+            <div class="category-grid">
+                <article class="category-card">
+                    <h3>Mi cuenta <span>→</span></h3>
+                    <p>Acceso al sistema, inicio de sesión y recuperación de contraseña.</p>
+                </article>
+
+                <article class="category-card">
+                    <h3>Solicitudes <span>→</span></h3>
+                    <p>Registro, consulta y seguimiento de solicitudes de beneficios.</p>
+                </article>
+
+                <article class="category-card">
+                    <h3>Requisitos <span>→</span></h3>
+                    <p>Documentos, condiciones y validación de tu información.</p>
+                </article>
+
+                <article class="category-card">
+                    <h3>Entregas <span>→</span></h3>
+                    <p>Asignaciones, fechas de entrega y beneficios otorgados.</p>
+                </article>
+            </div>
+        </section>
+
+        <!-- 2. PREGUNTAS FRECUENTES -->
+        <section class="help-section">
+            <div class="faq-section-layout">
+                <div class="faq-intro">
+                    <span class="eyebrow-label">RESPUESTAS A TUS DUDAS</span>
+                    <h2 class="section-title">Preguntas frecuentes</h2>
+                    <p class="section-subtitle">Resuelve tus dudas sobre los trámites y servicios del portal.</p>
+
+                    <div class="faq-sidebar-box">
+                        <small>¿No encuentras tu respuesta?</small>
+                        <p>El equipo de soporte puede orientarte con tu consulta.</p>
+                        <a href="#contacto-soporte" class="support-link">Contactar a soporte →</a>
+                    </div>
+                </div>
+
+                <div class="faq-list">
+                    <div class="faq-item active">
+                        <div class="faq-question">
+                            <span>¿Cómo recupero mi contraseña?</span>
+                            <span class="faq-toggle">−</span>
+                        </div>
+                        <div class="faq-answer">
+                            Para recuperar tu contraseña, contacta al equipo del sistema a través del correo específico indicado en la guía en PDF. En esa guía encontrarás las instrucciones para solicitar la recuperación de tu acceso.
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Cómo registro una solicitud de beneficio?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Qué documentos necesito para solicitar un beneficio?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Dónde puedo consultar el estado de mi solicitud?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <span>¿Cómo consulto la fecha de mi entrega?</span>
+                            <span class="faq-toggle">+</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. GUÍAS Y TUTORIALES -->
+        <section class="help-section">
+            <h2 class="section-title">Guías</h2>
+            <p class="section-subtitle">Te acompañamos paso a paso en cada trámite:</p>
+
+            <div class="guides-grid">
+                <article class="guide-card">
+                    <span class="step-badge">01</span>
+                    <h3>Ingresa al sistema</h3>
+                    <ol class="guide-steps">
+                        <li>Accede a la opción "Iniciar sesión".</li>
+                        <li>Escribe tu correo y contraseña.</li>
+                        <li>Selecciona "Ingresar".</li>
+                    </ol>
+                </article>
+
+                <article class="guide-card">
+                    <span class="step-badge">02</span>
+                    <h3>Solicita un beneficio</h3>
+                    <ol class="guide-steps">
+                        <li>Consulta los programas disponibles.</li>
+                        <li>Revisa los requisitos y completa tus datos.</li>
+                        <li>Adjunta los documentos y envía tu solicitud.</li>
+                    </ol>
+                </article>
+            </div>
+        </section>
+
+        <!-- 4. FORMULARIO DE CONTACTO Y SOPORTE TÉCNICO -->
+        <section id="contacto-soporte" class="support-section">
+            <div class="support-layout">
+                
+                <!-- Tarjeta Lateral de Soporte -->
+                <aside class="support-card">
+                    <div class="chat-icon">
+                        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M36 20C36 11.163 28.837 4 20 4C11.163 4 4 11.163 4 20C4 28.837 11.163 36 20 36C22.316 36 24.516 35.513 26.5 34.629L36 38L32.8 28.5C34.805 26.113 36 23.163 36 20ZM10 23.5C8.895 23.5 8 22.605 8 21.5C8 20.395 8.895 19.5 10 19.5C11.105 19.5 12 20.395 12 21.5C12 22.605 11.105 23.5 10 23.5ZM17 23.5C15.895 23.5 15 22.605 15 21.5C15 20.395 15.895 19.5 17 19.5C18.105 19.5 19 20.395 19 21.5C19 22.605 18.105 23.5 17 23.5ZM24 23.5C22.895 23.5 22 22.605 22 21.5C22 20.395 22.895 19.5 24 19.5C25.105 19.5 26 20.395 26 21.5C26 22.605 25.105 23.5 24 23.5ZM31 23.5C29.895 23.5 29 22.605 29 21.5C29 20.395 29.895 19.5 31 19.5C32.105 19.5 33 20.395 33 21.5C33 22.605 32.105 23.5 31 23.5Z"/>
+                        </svg>
+                    </div>
+                    <span class="card-label">SOPORTE TÉCNICO</span>
+                    <h2 class="card-title">¿Necesitas ayuda adicional?</h2>
+                    <p class="card-description">Cuéntanos qué sucede. Nuestro equipo te orientará para que puedas continuar con tu trámite.</p>
+                    <hr class="card-divider">
+                    <p class="card-subtitle">Estamos para orientarte</p>
+                    <p class="card-description">Recibirás la respuesta en el correo electrónico que indiques en tu consulta.</p>
+                    <a href="#full-name" class="card-link">Solicitar asistencia →</a>
+                </aside>
+
+                <!-- Formulario de Consulta -->
+                <div class="contact-form-section">
+                    <h2 class="form-title">Envíanos tu consulta</h2>
+                    <p class="form-top-description">Completa tus datos y describe cómo podemos ayudarte.</p>
+                    <p class="form-obligatory-note">Todos los campos son obligatorios.</p>
+
+                    <form id="support-form">
+                        <div class="form-row">
+                            <div class="form-field">
+                                <label for="full-name">Nombre completo</label>
+                                <input type="text" id="full-name" placeholder="Escribe tu nombre completo" required>
+                            </div>
+                            <div class="form-field">
+                                <label for="email">Correo electrónico</label>
+                                <input type="email" id="email" placeholder="nombre@ejemplo.com" required>
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="query-type">Tipo de consulta</label>
+                            <div class="select-wrapper">
+                                <select id="query-type" required>
+                                    <option value="" disabled selected>Selecciona una opción</option>
+                                    <option value="technical">Soporte Técnico</option>
+                                    <option value="general">Consulta General</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-field">
+                            <label for="problem-description">Descripción del problema</label>
+                            <textarea id="problem-description" placeholder="Cuéntanos qué ocurrió y en qué paso necesitas ayuda." required></textarea>
+                        </div>
+
+                        <p class="security-note">Por seguridad, no incluyas contraseñas ni datos bancarios.</p>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-submit">Enviar consulta</button>
+                            <p class="privacy-note">Usaremos tus datos solo para atender esta consulta.</p>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- PIE DE PÁGINA -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-top">
+                <div class="footer-brand">
+                    <div class="footer-brand-title">Portal de Subsidia</div>
+                    <div class="footer-brand-desc">Orientación y asistencia para acceder a tus beneficios.</div>
+                </div>
+                <a href="#" class="footer-help-link">Centro de Ayuda</a>
+            </div>
+            <div class="footer-bottom">
+                <span>© 2026 Portal de Subsidia. Todos los derechos reservados.</span>
+                <a href="#" class="footer-institutional-link">Información institucional</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
