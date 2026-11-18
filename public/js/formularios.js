@@ -3,9 +3,9 @@
 
 // Evita que los valores ingresados se interpreten como HTML.
 function escapar(valor = '') {
-  return String(valor).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[c]);
+    return String(valor).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[c]);
 }
 
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
@@ -14,10 +14,10 @@ const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entrie
 let catalogos = { departamentos: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
 
 async function cargarCatalogos() {
-  const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-  catalogos = j.dato;
+    const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
+    catalogos = j.dato;
 }
 
 // [{id, nombre}] -> [[valor, texto]] para opciones()
@@ -25,20 +25,20 @@ const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.nombre]);
 
 /* ---------- Envío (devuelve la respuesta completa, con `mensaje`) ---------- */
 async function enviarJSON(url, metodo, cuerpo) {
-  const r = await fetch(url, {
-    method: metodo,
-    credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-  return j;
+    const r = await fetch(url, {
+        method: metodo,
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
+    return j;
 }
 
 /* ---------- Piezas de formulario ---------- */
 function campo(label, name, value = '', type = 'text', placeholder = '', extra = '') {
-  return `
+    return `
     <div class="field">
       <label for="${name}">${label} *</label>
       <input
@@ -54,8 +54,9 @@ function campo(label, name, value = '', type = 'text', placeholder = '', extra =
   `;
 }
 
+// Genera las opciones de un elemento select.
 function opciones(lista, seleccionado = '') {
-  return `
+    return `
     <option value="">Seleccione...</option>
     ${lista.map(([valor, texto]) => `
       <option value="${escapar(valor)}" ${seleccionado === valor ? 'selected' : ''}>${escapar(texto)}</option>
@@ -67,7 +68,7 @@ function opciones(lista, seleccionado = '') {
    d: { id, nombre, apellido, documento_unico, nacimiento, telefono, correo,
         departamento_id, municipio, direccion } */
 function formBeneficiario(d = {}) {
-  return `
+    return `
     <form id="formBeneficiario">
       <div class="form-grid">
 
@@ -152,12 +153,12 @@ function formBeneficiario(d = {}) {
         claveCorrelativa, composicion, fechaInicio, fechaCierre, periodo, periodicidad_id,
         zonas [ids], criterios [], documentos } */
 function formPrograma(d = {}) {
-  const unidades = ['Paquete / kit', 'Unidad', 'Saco', 'Litro', 'Libras', 'Metros'];
-  const zonas = (d.zonas || []).map(Number);
-  const criterios = d.criterios || ['unidad', 'residencia', 'declaracion', 'consentimiento'];
-  const fecha = (v) => String(v || '').slice(0, 10);
+    const unidades = ['Paquete / kit', 'Unidad', 'Saco', 'Litro', 'Libras', 'Metros'];
+    const zonas = (d.zonas || []).map(Number);
+    const criterios = d.criterios || ['unidad', 'residencia', 'declaracion', 'consentimiento'];
+    const fecha = (v) => String(v || '').slice(0, 10);
 
-  return `
+    return `
     <form id="formPrograma">
 
       <header class="form-header">
@@ -254,10 +255,10 @@ function formPrograma(d = {}) {
         <h3>Criterios de elegibilidad</h3>
 
         ${[
-          ['unidad', 'Unidad productiva registrada y validada'],
-          ['residencia', 'Residencia o actividad en una zona habilitada'],
-          ['declaracion', 'Declaración de pequeña producción documentada'],
-          ['consentimiento', 'Consentimiento para tratamiento de datos vigente'],
+            ['unidad', 'Unidad productiva registrada y validada'],
+            ['residencia', 'Residencia o actividad en una zona habilitada'],
+            ['declaracion', 'Declaración de pequeña producción documentada'],
+            ['consentimiento', 'Consentimiento para tratamiento de datos vigente'],
         ].map(([valor, texto]) => `
           <label class="check">
             <input type="checkbox" name="criterios" value="${valor}" ${criterios.includes(valor) ? 'checked' : ''}>
@@ -282,36 +283,8 @@ function formPrograma(d = {}) {
 
 // Valores de un formulario de programa listos para enviar (zonas y criterios como arreglos).
 function valoresPrograma(form) {
-  const datos = valoresFormulario(form);
-  datos.zonas = Array.from(form.elements.zonas.selectedOptions, (o) => o.value);
-  datos.criterios = [...form.querySelectorAll('input[name="criterios"]:checked')].map((c) => c.value);
-  return datos;
-}
-
-// app.js:819
-function addEditarButton(text,id){ 
-    return `
-                  <button
-                    class="btn"
-                    data-editar-${text}="${id}"
-                  >
-                    ${(usuarioActual.rol == "admin")|| (usuarioActual.rol =="operador" &&text=="beneficiario") ? "Editar" : "ver"}
-                  </button>`
-}
-function addCancelarButton(id){ 
-    return `                  <button
-                    class="btn"
-                    data-cancelar-programa="${id}"
-                  >
-                    Cancelar
-                  </button>`
-}
-function addSolicitarButton(id){ 
-    return `
-                  <button
-                    class="btn"
-                    solicitar-inscripcion-en-programa="${id}"
-                  >
-                    Solicitar
-                  </button>`
+    const datos = valoresFormulario(form);
+    datos.zonas = Array.from(form.elements.zonas.selectedOptions, (o) => o.value);
+    datos.criterios = [...form.querySelectorAll('input[name="criterios"]:checked')].map((c) => c.value);
+    return datos;
 }

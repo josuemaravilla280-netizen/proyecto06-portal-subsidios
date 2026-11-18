@@ -1,14 +1,12 @@
 // Uso: programa.html?id=123
 const ID = new URLSearchParams(location.search).get('id');
 const API = `/api/programas/${encodeURIComponent(ID)}`;
-const $ = (id) => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
+// en este element salen los errores
+const p_mensaje = $('mensaje');
 
-function aviso(texto) {
-    const m = $('mensaje');
-    m.textContent = texto;
-    m.className = 'mensaje visible error';
-}
+let usuario = null; // sesión actual (/api/auth/me)
+let programa = null; // datos cargados del programa
 
 // El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
 async function pedir(url) {
@@ -18,63 +16,20 @@ async function pedir(url) {
     return j.datos ?? j.dato ?? j;
 }
 
-// ---- jsonb -> lista de [etiqueta, texto] ----
-const humanizar = (k) => {
-    const s = String(k).replace(/_/g, ' ');
-    return s.charAt(0).toUpperCase() + s.slice(1);
-};
-
-function formatear(v) {
-    if (v === null || v === undefined || v === '') return 'Sin dato';
-    if (typeof v === 'boolean') return v ? 'Sí' : 'No';
-    if (Array.isArray(v)) {
-        return v.length ? v.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ') : 'Sin dato';
-    }
-    return String(v);
-}
-
-// Aplana un objeto jsonb; `omitir` lleva rutas como 'entrega.estado'.
-function aplanar(obj, omitir = [], ruta = '', etiquetaPadre = '') {
-    const filas = [];
-    Object.entries(obj ?? {}).forEach(([k, v]) => {
-        const r = ruta ? `${ruta}.${k}` : k;
-        if (omitir.includes(r)) return;
-        const etiqueta = etiquetaPadre ? `${etiquetaPadre} · ${humanizar(k)}` : humanizar(k);
-        if (v && typeof v === 'object' && !Array.isArray(v)) filas.push(...aplanar(v, omitir, r, etiqueta));
-        else filas.push([etiqueta, formatear(v)]);
-    });
-    return filas;
-}
-
-function llenarLista(ul, filas) {
-    ul.replaceChildren();
-    if (!filas.length) {
-        const li = document.createElement('li');
-        li.textContent = 'No hay datos adicionales.';
-        ul.appendChild(li);
-        return;
-    }
-    filas.forEach(([etiqueta, valor]) => {
-        const li = document.createElement('li');
-        const s = document.createElement('span');
-        s.textContent = etiqueta;
-        const b = document.createElement('b');
-        b.textContent = valor;
-        li.append(s, b);
-        ul.appendChild(li);
-    });
-}
-
 async function cargarUsuario() {
     try {
         const r = await pedir('/api/auth/me');
-        if (r.usuario) $('datosUsuario').textContent = `${r.usuario.nombre} · Rol: ${r.usuario.rol}`;
+        if (r.usuario) {
+            usuario = r.usuario;
+            $('datosUsuario').textContent = `${r.usuario.nombre} · Rol: ${r.usuario.rol}`;
+        }
     } catch { /* sin sesión: las demás solicitudes mostrarán el error */ }
 }
 
 /* Programa: { nombre, tipo, entrega, descripcion, cupos_maximos, entidad_nombre, estado, periodicidad,fecha_inicio, fecha_final, documentos, zonas_nombres, datos (jsonb) } */
 async function cargarInfo() {
     const p = await pedir(API);
+    programa = p;
     $('tNombre').textContent = p.nombre ?? 'Programa';
     $('iTipo').textContent = p.tipo ?? '';
     $('iEntrega').textContent = p.entrega ?? '';
@@ -177,12 +132,70 @@ async function cargarGraficos() {
     );
 }
 
+/* ---------- Edición (solo administrador) ---------- */
+async function abrirEdicion() {
+    if (!programa) return;
+    try {
+        await cargarCatalogos();
+    } catch (e) { return mensaje(p_mensaje,e.message); }
+
+    const d = {
+        id: ID,
+        nombre: programa.nombre,
+        entidad: programa.entidad,
+        tipo_id: programa.tipo_id,
+        estado_id: programa.estado_id,
+        estado: programa.estado,
+        descripcion: programa.descripcion,
+        cantidad: programa.cantidad,
+        unidad: programa.unidad,
+        cupos: programa.cupos_maximos,
+        monto: programa.monto,
+        claveCorrelativa: programa.clave_correlativa,
+        composicion: programa.composicion,
+        fechaInicio: programa.fecha_inicio,
+        fechaCierre: programa.fecha_final,
+        periodo: programa.periodo,
+        periodicidad_id: programa.periodicidad_id,
+        zonas: programa.zonas,
+        criterios: programa.criterios,
+        documentos: programa.documentos,
+    };
+
+    const panel = $('panelEdicion');
+    panel.innerHTML = `<h2>Editar programa</h2>${formPrograma(d)}`;
+    panel.classList.remove('oculto');
+    $('formPrograma').addEventListener('submit', guardarPrograma);
+    $('cancelarPrograma').addEventListener('click', cerrarEdicion);
+    panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+function cerrarEdicion() {
+    const panel = $('panelEdicion');
+    panel.classList.add('oculto');
+    panel.replaceChildren();
+}
+
+async function guardarPrograma(e) {
+    e.preventDefault();
+    try {
+        const r = await enviarJSON(API, 'PUT', valoresPrograma(e.currentTarget));
+        cerrarEdicion();
+        await Promise.all([cargarInfo(), cargarGraficos()]);
+        mensaje(p_mensaje,r.mensaje || 'Programa actualizado.', 'exito');
+    } catch (err) { mensaje(p_mensaje,err.message); }
+}
+
+$('btnEditar').onclick = abrirEdicion;
+
 $('btnCerrar').onclick = () => window.close();
 
 if (!ID) {
-    aviso('Falta el ID del programa.');
+    mensaje(p_mensaje,'Falta el ID del programa.');
 } else {
-    cargarUsuario();
-    Promise.all([cargarInfo(), cargarGraficos()]).catch((e) => aviso(e.message));
+    (async () => {
+        await cargarUsuario(); // el rol define si se muestra Editar
+        if (usuario?.rol === 'admin') $('btnEditar').classList.remove('oculto');
+        await Promise.all([cargarInfo(), cargarGraficos()]);
+    })().catch((e) => mensaje(p_mensaje,e.message));
 }
-setInterval(cargarGraficos, 10000);

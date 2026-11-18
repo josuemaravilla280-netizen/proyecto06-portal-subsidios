@@ -49,7 +49,7 @@ export function listarBeneficiarios() {
            d.name                       AS departamento,
            to_char(p.nacimiento, 'YYYY-MM-DD') AS nacimiento,
            m.id                         AS municipio_id,
-           c.datos->>'direccion'        AS direccion,
+           p.direccion                  AS direccion,
            c.telefono                   AS telefono,
            c.email                      AS correo,
            ec.name                      AS estado
@@ -66,8 +66,8 @@ export async function obtenerBeneficiario(id) {
     SELECT c.id,
            p.nombre || ' ' || p.apellido                         AS nombre,
            d.name                                                AS departamento,
-           m.id                                                  AS municipio_id,
-           c.datos->>'direccion'                                 AS direccion,
+           m.name                                                AS municipio,
+           p.direccion                                           AS direccion,
            EXTRACT(YEAR FROM age(p.nacimiento))::int             AS edad,
            CASE WHEN p.is_dui THEN p.documento_unico END         AS numero_documento,
            CASE WHEN NOT p.is_dui THEN p.documento_unico END     AS numero_pasaporte,
@@ -76,6 +76,7 @@ export async function obtenerBeneficiario(id) {
            p.apellido                                            AS apellido,
            p.documento_unico                                     AS documento_unico,
            p.departamento_residencia                             AS departamento_id,
+           p.municipio_residencia                                AS municipio_id,
            c.telefono                                            AS telefono,
            c.email                                               AS correo,
            to_char(p.nacimiento, 'YYYY-MM-DD')                   AS fecha_nacimiento,
@@ -344,7 +345,7 @@ export function crearBeneficiario(d) {
       INSERT INTO cuentas_beneficiarios_ed (persona_documento, estado, telefono, email, datos)
       VALUES (
         ${d.documento},
-        1
+        1,
         ${d.telefono},
         ${d.email || null},
         ${tx.json({})}::jsonb
@@ -373,7 +374,7 @@ export function actualizarBeneficiario(id, d) {
           apellido = ${d.apellido},
           departamento_residencia = ${dep.id},
           municipio_residencia = ${mun.id},
-          direccion = ${d.direccion}
+          direccion = ${d.direccion},
           nacimiento = COALESCE(${d.nacimiento ?? null}::date, nacimiento)
       WHERE documento_unico = ${c.persona_documento}`;
 

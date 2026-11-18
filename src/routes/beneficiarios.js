@@ -1,5 +1,7 @@
 const express = require('express');
 const { permitir } = require('../middleware/auth');
+// getData.mjs es ESM: se carga con import() dinámico.
+const db = () => import('../data/getData.mjs');
 const router = express.Router();
 const operador = permitir('admin', 'operador');
 
@@ -14,9 +16,6 @@ const conAcceso = [
         res.status(403).json({ ok: false, mensaje: 'No tiene permiso para este beneficiario.' });
     },
 ];
-
-// getData.mjs es ESM: se carga con import() dinámico.
-const db = () => import('../data/getData.mjs');
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const idValido = (req, res, next) =>

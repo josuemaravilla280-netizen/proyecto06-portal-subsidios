@@ -20,8 +20,3 @@ function mensaje(elemento, texto, tipo = 'error') {
     elemento.className = `mensaje visible ${tipo}`;  //y le asigna un texto 
 }
 
-function aviso(texto, tipo = 'error') {
-    const m = $('mensaje');
-    m.textContent = texto;
-    m.className = `mensaje visible ${tipo}`;
-}
