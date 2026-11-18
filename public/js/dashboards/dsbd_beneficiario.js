@@ -258,6 +258,7 @@ async function abrirEdicion() {
         telefono: perfil.telefono,
         correo: perfil.correo,
         departamento_id: perfil.departamento_id,
+        municipio_id: perfil.municipio_id,
         municipio: perfil.municipio,
         direccion: perfil.direccion,
     };

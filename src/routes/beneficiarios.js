@@ -24,6 +24,7 @@ const idValido = (req, res, next) =>
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
     fn(req, res).catch((e) => {
+        if (e.code === '23505') return res.status(409).json({ ok: false, mensaje: 'Ya existe un registro con ese correo, teléfono o documento.' });
         if (e.code === '23503') return res.status(400).json({ ok: false, mensaje: 'Alguno de los valores seleccionados no es válido.' });
         if (e.code === '22007' || e.code === '22008' || e.code === '22P02') return res.status(400).json({ ok: false, mensaje: 'Alguno de los datos tiene un formato no válido.' });
         console.error(e);
@@ -55,6 +56,8 @@ function limpiar(b) {
 function validar(d, nacimientoObligatorio) {
     if (!d.nombre || !d.apellido || !d.documento || !d.telefono || !d.municipio || !d.departamento || !d.direccion)
         return 'Complete todos los campos obligatorios.';
+    if (!/^\d+$/.test(d.municipio)) return 'El municipio no es válido.';
+    if (d.direccion.length > 250) return 'La dirección no puede superar los 250 caracteres.';
     if (!/^[A-Z0-9]{1,9}$/.test(d.documento)) return 'El DUI o pasaporte no tiene un formato válido.';
     if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return 'El correo electrónico no tiene un formato válido.';
     if (nacimientoObligatorio && !d.nacimiento) return 'Falta la fecha de nacimiento.';
@@ -144,6 +147,7 @@ router.post('/', operador, a(async (req, res) => {
     const { crearBeneficiario } = await db();
     const r = await crearBeneficiario(d);
     if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
+    if (r.municipioInvalido) return res.status(400).json({ ok: false, mensaje: 'El municipio no pertenece al departamento seleccionado.' });
     if (r.duplicado) return res.status(409).json({ ok: false, mensaje: 'Ya existe un beneficiario con ese DUI o pasaporte.' });
     res.status(201).json({ ok: true, dato: { id: r.id }, mensaje: 'Beneficiario registrado.' });
 }));
@@ -157,6 +161,7 @@ router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
     const r = await actualizarBeneficiario(req.params.id, d);
     if (r.noEncontrado) return noEncontrado(res);
     if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
+    if (r.municipioInvalido) return res.status(400).json({ ok: false, mensaje: 'El municipio no pertenece al departamento seleccionado.' });
     if (r.documentoDistinto) return res.status(400).json({ ok: false, mensaje: 'El DUI o pasaporte no se puede modificar.' });
     res.json({ ok: true, dato: { id: r.id }, mensaje: 'Información actualizada.' });
 }));

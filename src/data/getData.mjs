@@ -48,7 +48,8 @@ export function listarBeneficiarios() {
            p.departamento_residencia    AS departamento_id,
            d.name                       AS departamento,
            to_char(p.nacimiento, 'YYYY-MM-DD') AS nacimiento,
-           m.id                         AS municipio_id,
+           m.name                       AS municipio,
+           p.municipio_residencia       AS municipio_id,
            p.direccion                  AS direccion,
            c.telefono                   AS telefono,
            c.email                      AS correo,
@@ -382,7 +383,7 @@ export function actualizarBeneficiario(id, d) {
       UPDATE cuentas_beneficiarios_ed
       SET telefono = ${d.telefono},
           email = ${d.email || null},
-          datos = COALESCE(datos, '{}'::jsonb)
+                    datos = COALESCE(datos, '{}'::jsonb)
                   || ${tx.json({})}::jsonb
       WHERE id = ${id}`;
         return { id };
@@ -470,20 +471,6 @@ export function actualizarPrograma(id, d) {
     });
 }
 
-// No elimina programas con beneficiarios inscritos.
-// export function eliminarPrograma(id) {
-//     return sql.begin(async (tx) => {
-//         const [p] = await tx`SELECT id FROM programas_ed WHERE id = ${id} FOR UPDATE`;
-//         if (!p) return { noEncontrado: true };
-//         const [{ n }] = await tx`SELECT count(*)::int AS n FROM inscripciones_ed WHERE programa_id = ${id}`;
-//         if (n > 0) return { conInscritos: true };
-//         await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
-//         await tx`DELETE FROM programas_ed WHERE id = ${id}`;
-//         return { ok: true };
-//     });
-// }
-
-// Todas se devuelven como { id, nombre }.
 export async function obtenerCatalogos() {
     const [departamentos, municipios, entidades, tipos, estados, periodicidades] = await Promise.all([
         sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
