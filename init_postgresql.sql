@@ -49,6 +49,7 @@ CREATE TABLE personas_ed (
     apellido                VARCHAR(250) NOT NULL,
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
     municipio_residencia    INTEGER NOT NULL REFERENCES municipios_ec(id),
+    direccion               VARCHAR(250),
     nacimiento              DATE NOT NULL
 );
 

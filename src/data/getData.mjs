@@ -46,9 +46,9 @@ export function listarBeneficiarios() {
            p.nombre,
            p.apellido,
            p.departamento_residencia    AS departamento_id,
-           d.name                     AS departamento,
+           d.name                       AS departamento,
            to_char(p.nacimiento, 'YYYY-MM-DD') AS nacimiento,
-           c.datos->>'municipio'        AS municipio,
+           m.id                         AS municipio_id,
            c.datos->>'direccion'        AS direccion,
            c.telefono                   AS telefono,
            c.email                      AS correo,
@@ -56,6 +56,7 @@ export function listarBeneficiarios() {
     FROM cuentas_beneficiarios_ed c
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
+    JOIN municipios_ec m ON m.id = p.municipio_residencia
     JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
     ORDER BY p.apellido, p.nombre`;
 }
@@ -64,8 +65,8 @@ export async function obtenerBeneficiario(id) {
     const [fila] = await sql`
     SELECT c.id,
            p.nombre || ' ' || p.apellido                         AS nombre,
-           d.name                                              AS departamento,
-           c.datos->>'municipio'                                 AS municipio,
+           d.name                                                AS departamento,
+           m.id                                                  AS municipio_id,
            c.datos->>'direccion'                                 AS direccion,
            EXTRACT(YEAR FROM age(p.nacimiento))::int             AS edad,
            CASE WHEN p.is_dui THEN p.documento_unico END         AS numero_documento,
@@ -84,6 +85,7 @@ export async function obtenerBeneficiario(id) {
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
     JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
+    JOIN municipios_ec m ON m.id = p.municipio_residencia
     WHERE c.id = ${id}`;
     return fila ?? null;
 }
@@ -128,9 +130,6 @@ export async function documentosDeBeneficiario(id) {
     SELECT COALESCE(datos->'documentos', '[]'::jsonb) AS documentos
     FROM cuentas_beneficiarios_ed WHERE id = ${id}`;
     return fila ? fila.documentos : null;
-    array.forEach(element => {
-        
-    });
 }
 
 const TABLA_ESTADOS = {
@@ -222,8 +221,6 @@ export function crearInscripcion(id, programaId) {
 /* ---------- Programas ---------- */
 // programas_ed.datos: { cantidad, unidad, cupos, monto, clave_correlativa,
 //                       composicion, periodo, criterios }
-
-// "2 cajas · Arroz, frijol y aceite"
 const ENTREGA = sql`concat_ws(' · ',
   nullif(trim(concat_ws(' ', pr.datos->>'cantidad', pr.datos->>'unidad')), ''),
   nullif(pr.datos->>'composicion', ''))`;
@@ -295,16 +292,16 @@ export async function obtenerPrograma(id) {
 }
 
 export async function estadisticasPrograma(id) {
-  const [prog] = await sql`
+    const [prog] = await sql`
     SELECT (datos->>'cupos')::int AS cupos FROM programas_ed WHERE id = ${id}`;
-  if (!prog) return null;
-  const [e] = await sql`
+    if (!prog) return null;
+    const [e] = await sql`
     SELECT count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'no_recibido')::int AS enviados,
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'recibido')::int    AS recibidos,
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'no_enviado')::int  AS pendientes,
            count(*)::int                                                            AS cupos_ocupados
     FROM inscripciones_ed WHERE programa_id = ${id} AND estado NOT IN ${RETIRADAS}`;
-  return { ...e, cupos_disponibles: Math.max((prog.cupos ?? 0) - e.cupos_ocupados, 0) };
+    return { ...e, cupos_disponibles: Math.max((prog.cupos ?? 0) - e.cupos_ocupados, 0) };
 }
 
 /* ---------- Escritura: beneficiarios ---------- */
@@ -319,6 +316,14 @@ async function buscarDepartamento(tx, valor) {
     return dep ?? null;
 }
 
+// El municipio debe existir y pertenecer al departamento elegido.
+async function buscarMunicipio(tx, valor, departamentoId) {
+    const [mun] = await tx`
+    SELECT id FROM municipios_ec
+    WHERE id = ${Number(valor)} AND departamento = ${departamentoId}`;
+    return mun ?? null;
+}
+
 export function crearBeneficiario(d) {
     return sql.begin(async (tx) => {
         const [existe] = await tx`
@@ -327,26 +332,27 @@ export function crearBeneficiario(d) {
 
         const dep = await buscarDepartamento(tx, d.departamento);
         if (!dep) return { departamentoInvalido: true };
+        const mun = await buscarMunicipio(tx, d.municipio, dep.id);
+        if (!mun) return { municipioInvalido: true };
 
         await tx`
-      INSERT INTO personas_ed (documento_unico, is_dui, nombre, apellido, departamento_residencia, nacimiento)
-      VALUES (${d.documento}, ${d.isDui}, ${d.nombre}, ${d.apellido}, ${dep.id}, ${d.nacimiento})
+      INSERT INTO personas_ed (documento_unico, is_dui, nombre, apellido, departamento_residencia, municipio_residencia, direccion, nacimiento)
+      VALUES (${d.documento}, ${d.isDui}, ${d.nombre}, ${d.apellido}, ${dep.id}, ${mun.id},${d.direccion}, ${d.nacimiento})
       ON CONFLICT (documento_unico) DO NOTHING`;
 
         const [c] = await tx`
       INSERT INTO cuentas_beneficiarios_ed (persona_documento, estado, telefono, email, datos)
       VALUES (
         ${d.documento},
-        1,
+        1
         ${d.telefono},
         ${d.email || null},
-        ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
+        ${tx.json({})}::jsonb
       )
       RETURNING id`;
         return { id: c.id };
     });
 }
-
 
 // El documento no se modifica (es la clave primaria de personas_ed).
 export function actualizarBeneficiario(id, d) {
@@ -358,12 +364,16 @@ export function actualizarBeneficiario(id, d) {
 
         const dep = await buscarDepartamento(tx, d.departamento);
         if (!dep) return { departamentoInvalido: true };
+        const mun = await buscarMunicipio(tx, d.municipio, dep.id);
+        if (!mun) return { municipioInvalido: true };
 
         await tx`
       UPDATE personas_ed
       SET nombre = ${d.nombre},
           apellido = ${d.apellido},
           departamento_residencia = ${dep.id},
+          municipio_residencia = ${mun.id},
+          direccion = ${d.direccion}
           nacimiento = COALESCE(${d.nacimiento ?? null}::date, nacimiento)
       WHERE documento_unico = ${c.persona_documento}`;
 
@@ -372,7 +382,7 @@ export function actualizarBeneficiario(id, d) {
       SET telefono = ${d.telefono},
           email = ${d.email || null},
           datos = COALESCE(datos, '{}'::jsonb)
-                  || ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
+                  || ${tx.json({})}::jsonb
       WHERE id = ${id}`;
         return { id };
     });
@@ -474,12 +484,13 @@ export function actualizarPrograma(id, d) {
 
 // Todas se devuelven como { id, nombre }.
 export async function obtenerCatalogos() {
-    const [departamentos, entidades, tipos, estados, periodicidades] = await Promise.all([
+    const [departamentos, municipios, entidades, tipos, estados, periodicidades] = await Promise.all([
         sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
+        sql`SELECT id, departamento AS departamento_id, name AS nombre FROM municipios_ec ORDER BY name`,
         sql`SELECT id, nombre FROM empresas_ed ORDER BY nombre`,
         sql`SELECT id, name AS nombre FROM tipos_beneficios_ec ORDER BY id`,
         sql`SELECT id, name AS nombre FROM estados_programa_ec ORDER BY id`,
         sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
     ]);
-    return { departamentos, entidades, tipos, estados, periodicidades };
+    return { departamentos, municipios, entidades, tipos, estados, periodicidades };
 }
