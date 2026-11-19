@@ -67,7 +67,7 @@ function sinImagen() {
     ph.className = 'perfil-img';
     ph.style.cssText = 'display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;';
     ph.textContent = 'Sin imagen del documento';
-    img.replaceWith(ph);
+    img?.replaceWith(ph);
 }
 
 async function cargarPerfil() {

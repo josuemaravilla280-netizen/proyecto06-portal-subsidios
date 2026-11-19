@@ -11,7 +11,7 @@ function escapar(valor = '') {
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
 
 /* ---------- Catálogos (GET /api/catalogos) ---------- */
-let catalogos = { departamentos: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
+let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
 
 async function cargarCatalogos() {
     const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
@@ -64,9 +64,38 @@ function opciones(lista, seleccionado = '') {
   `;
 }
 
+// <option> de los municipios del departamento elegido (ninguno si no hay departamento).
+function opcionesMunicipios(departamentoId, seleccionado = '') {
+    const lista = (catalogos.municipios || []).filter(
+        (m) => departamentoId && String(m.departamento_id) === String(departamentoId)
+    );
+    return `
+    <option value="">${departamentoId ? 'Seleccione...' : 'Seleccione un departamento'}</option>
+    ${lista.map((m) => `
+      <option value="${m.id}" ${String(seleccionado) === String(m.id) ? 'selected' : ''}>${escapar(m.nombre)}</option>
+    `).join('')}
+  `;
+}
+
+// Reemplazar municipios al cambiar departamento
+function enlazarMunicipios(form) {
+    const departamento = form.elements.departamento;
+    const municipio = form.elements.municipio;
+    departamento.addEventListener('change', () => {
+        municipio.innerHTML = opcionesMunicipios(departamento.value);
+    });
+}
+// cualquier formulario que tenga #departamento y #municipio, sin importar cuándo se inserte en la página.
+document.addEventListener('change', (e) => {
+  const departamento = e.target;
+  if (departamento.id !== 'departamento' || !departamento.form) return;
+  const municipio = departamento.form.elements.municipio;
+  if (municipio) municipio.innerHTML = opcionesMunicipios(departamento.value);
+});
+
 /* ---------- Beneficiario ----------
    d: { id, nombre, apellido, documento_unico, nacimiento, telefono, correo,
-        departamento_id, municipio, direccion } */
+        departamento_id, municipio_id, direccion } */
 function formBeneficiario(d = {}) {
     return `
     <form id="formBeneficiario">
@@ -128,12 +157,14 @@ function formBeneficiario(d = {}) {
 
         <div class="field">
           <label for="municipio">Municipio *</label>
-          <input id="municipio" name="municipio" value="${escapar(d.municipio || '')}" required>
+          <select id="municipio" name="municipio" required>
+            ${opcionesMunicipios(d.departamento_id, d.municipio_id)}
+          </select>
         </div>
 
         <div class="field">
           <label for="direccion">Dirección de residencia *</label>
-          <input id="direccion" name="direccion" value="${escapar(d.direccion || '')}" required>
+          <input id="direccion" name="direccion" maxlength="250" value="${escapar(d.direccion || '')}" required>
         </div>
 
       </div>
