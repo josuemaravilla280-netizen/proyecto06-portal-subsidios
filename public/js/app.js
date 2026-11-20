@@ -1030,3 +1030,21 @@ document.querySelectorAll('[data-static]').forEach((enlace) => {
     );
   });
 });
+
+
+
+const soporteBtn = document.getElementById('soporteBtn');
+const soportePanel = document.getElementById('soportePanel');
+
+soporteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    soportePanel.classList.toggle('activo');
+});
+
+// Cierra el panel si el usuario hace clic fuera de él
+document.addEventListener('click', (e) => {
+    if (!soportePanel.contains(e.target) && e.target !== soporteBtn) {
+        soportePanel.classList.remove('activo');
+    }
+});
+

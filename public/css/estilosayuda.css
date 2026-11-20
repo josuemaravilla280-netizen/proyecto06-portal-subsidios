@@ -602,3 +602,123 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+.guia-contenedor {
+    width: 100%;
+    max-width: 720px;
+    margin: 20px auto;
+}
+
+.guia-tarjeta {
+    background-color: var(--panel);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 40px 36px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+}
+
+.guia-etiqueta {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-light);
+    background-color: rgba(139, 184, 255, 0.12);
+    border: 1px solid rgba(139, 184, 255, 0.25);
+    padding: 4px 10px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+}
+
+.guia-encabezado h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.25;
+    margin-bottom: 10px;
+}
+
+.guia-encabezado p {
+    font-size: 14.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.guia-paso {
+    padding-top: 24px;
+}
+
+.guia-paso h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.guia-paso p {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.guia-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.btn-descargar {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 13px 24px;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+}
+
+.btn-descargar:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-secundario {
+    display: inline-block;
+    background-color: var(--dark-box);
+    color: var(--accent-light);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.btn-secundario:hover {
+    border-color: var(--accent-light);
+    background-color: rgba(139, 184, 255, 0.1);
+}
+
+@media (max-width: 540px) {
+    .guia-tarjeta {
+        padding: 28px 22px;
+    }
+
+    .btn-descargar,
+    .btn-secundario {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+#descargar-guia{
+    color:white
+}

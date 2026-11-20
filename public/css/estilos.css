@@ -498,3 +498,93 @@ td {
         width: 100%;
     }
 }
+
+.soporte-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.soporte-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background-color: var(--primary-color, #3b82f6);
+    color: #ffffff;
+    border: none;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.soporte-btn:hover {
+    background-color: var(--primary-hover, #2563eb);
+    transform: scale(1.05);
+}
+
+.soporte-panel {
+    width: 280px;
+    background-color: var(--panel, #1e293b);
+    border: 1px solid var(--border-color, #334155);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+    
+    /* Oculto por defecto con transición suave */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s ease;
+}
+
+.soporte-panel.activo {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.soporte-header h4 {
+    color: #ffffff;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.soporte-header p {
+    color: var(--text-muted, #94a3b8);
+    font-size: 12.5px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color, #334155);
+}
+
+.soporte-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.soporte-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background-color: var(--dark-box, #0f172a);
+    color: #e2e8f0;
+    text-decoration: none;
+    font-size: 13px;
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.soporte-item:hover {
+    border-color: var(--accent-light, #60a5fa);
+    background-color: rgba(96, 165, 250, 0.1);
+}

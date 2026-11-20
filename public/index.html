@@ -33,5 +33,33 @@
     <section id="vista" class="vista-panel"><h2>Bienvenido</h2><p>Seleccione una opción del menú según sus permisos.</p></section>
   </main>
   <footer><span>Subsidios · ayudas</span><div class="links-footer"><a href="#" data-static="privacidad">Privacidad y tratamiento de datos</a><a href="#" data-static="condiciones">Condiciones de uso</a></div></footer>
-  <script src="/js/app.js" defer></script>
+  <!-- Widget flotante de soporte -->
+<div class="soporte-widget">
+    <!-- Panel que se despliega -->
+    <div class="soporte-panel" id="soportePanel">
+        <div class="soporte-header">
+            <h4>¿Olvidaste tu contraseña?</h4>
+            <p>Elige cómo quieres recibir ayuda:</p>
+        </div>
+        <div class="soporte-opciones">
+            <a href="ayuda.html#contacto-soporte" class="soporte-item">
+                <span>✉️</span> Enviar solicitud a soporte
+            </a>
+            <a href="ayuda.html" class="soporte-item">
+                <span>📄</span> Ver guía de recuperación
+            </a>
+            <a href="mailto:soportesubsidia@gmail.com" class="soporte-item">
+                <span>🛠️</span> Escribir a correo directo
+            </a>
+        </div>
+    </div>
+
+    <!-- Botón principal -->
+    <button class="soporte-btn" id="soporteBtn" aria-label="Ayuda y contacto">
+        ?
+    </button>   
+</div>
+  
+  <script src="js/app.js" defer></script>
+
 </body></html>
