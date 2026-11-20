@@ -278,7 +278,7 @@ function formPrograma(d = {}) {
         <p class="notice">Defina qué debe aportar el beneficiario al inscribirse en el programa.</p>
 
         <div id="requisitos">
-          ${(d.requisitos || []).map((r) => htmlRequisito(r)).join('')}
+          ${(d.requisitos || []).map((r) => addRequisito(r)).join('')}
         </div>
 
         <p id="sinRequisitos" class="estado-vacio ${(d.requisitos || []).length ? 'oculto' : ''}">
@@ -339,7 +339,7 @@ const CAMPOS_CUENTA = {
 let contadorRequisitos = 0;
 
 // Panel de un requisito (vacío o con los valores de `r`).
-function htmlRequisito(r = {}) {
+function addRequisito(r = {}) {
     const n = ++contadorRequisitos;
     const tipo = r.tipo || 'texto';
     return `
@@ -433,7 +433,7 @@ document.addEventListener('click', (e) => {
     if (!boton) return;
     const form = boton.closest('form');
     if (boton.id === 'agregarRequisito') {
-        form.querySelector('#requisitos').insertAdjacentHTML('beforeend', htmlRequisito());
+        form.querySelector('#requisitos').insertAdjacentHTML('beforeend', addRequisito());
     } else {
         boton.closest('.panel-requisito').remove();
     }

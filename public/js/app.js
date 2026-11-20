@@ -360,13 +360,13 @@ async function guardarPrograma(e) {
     e.preventDefault();
 
     const formulario = e.currentTarget;
-    const datos = valoresFormulario(formulario);
+    const datos = valoresPrograma(formulario);
 
     // Obtiene únicamente los criterios que están marcados.
     datos.criterios = [
         ...formulario.querySelectorAll('input[name="criterios"]:checked')
     ].map((elemento) => elemento.value);
-    datos.zonas = Array.from($('#zonas').selectedOptions, (o) => o.value);
+    datos.zonas = [...formulario.querySelectorAll('input[name="zonas"]:checked')].map((el) => el.value);
 
     try {
         const r = await api(

@@ -4,7 +4,9 @@ const { permitir } = require('../middleware/auth');
 const db = () => import('../data/getData.mjs');
 const router = express.Router();
 const operador = permitir('admin', 'operador');
+const crypto = require('crypto');
 const path = require('node:path');
+const fs = require('fs/promises');
 
 const usuarioDe = (req) => req.usuario ?? req.user ?? req.session?.usuario ?? null;
 
@@ -171,7 +173,7 @@ router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
 // En cuentas_beneficiarios_ed.datos.documentos: { "acta de nacimiento": "enlace/al/archivo" }.
 const TIPOS_ARCHIVO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'application/pdf': 'pdf' };
 const MIME_POR_EXTENSION = { png: 'image/png', jpg: 'image/jpeg', pdf: 'application/pdf' };
-const CARPETA_DOCS = path.join('..', '..', 'users_private_data', 'uploads', 'documentos');
+const CARPETA_DOCS = path.join(process.cwd(), 'users_private_data', 'uploads', 'documentos');
 const decodificar = (v) => { try { return decodeURIComponent(String(v ?? '')); } catch { return ''; } };
 const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 

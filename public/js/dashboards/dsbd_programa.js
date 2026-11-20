@@ -189,7 +189,7 @@ $('btnEditar').onclick = abrirEdicion;
 
 // El formulario vive en su propia página: inscribirse_en.html?id=<programa>
 function abrirInscripcion() {
-    window.open(`inscribirse_en.html?id=${encodeURIComponent(ID)}`, '_blank');
+    window.open(`../inscribirse_en.html?id=${encodeURIComponent(ID)}`, '_blank');
 }
 $('btnInscribirme').onclick = abrirInscripcion;
 
