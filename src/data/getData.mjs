@@ -127,7 +127,7 @@ export async function programasDeBeneficiario(id) {
 }
 
 // cuentas_beneficiarios_ed.datos: { "documentos": [{ "tipo", "nombre_archivo", "url" }] }
-export async function documentosDeBeneficiario(id) {
+export async function beneficiarioDocuments(id) {
     const [fila] = await sql`
     SELECT COALESCE(datos->'documentos', '[]'::jsonb) AS documentos
     FROM cuentas_beneficiarios_ed WHERE id = ${id}`;
@@ -191,9 +191,9 @@ export function retirarInscripcion(id, programaId, quien) {
 const RETIRADAS = sql`(SELECT id FROM estados_incripciones_ec WHERE name IN ('retirarB', 'retirarS'))`;
 
 
-
+// 'enespera' si solicita el beneficiario, 'aprovada' si registra el personal).
 // true si se creó, false si ya estaba
-export function crearInscripcion(id, programaId) {
+export function crearInscripcion(id, programaId, extra = {}, estado = 'enespera') {
     return sql.begin(async (tx) => {
         const [pr] = await tx`
       SELECT ep.name AS estado
@@ -202,12 +202,15 @@ export function crearInscripcion(id, programaId) {
         if (!pr) return { programaNoExiste: true };
         if (pr.estado === 'cancelado_incompletado') return { programaCancelado: true };
 
+        const estadoId = await idEstado(tx, 'inscripcion', estado);
+        if (estadoId === null) return { estadoFaltante: estado };
+
         const filas = await tx`
       INSERT INTO inscripciones_ed (usuario_id, programa_id, fecha_solicitud, estado, datos)
       VALUES (
         ${id}, ${programaId}, CURRENT_DATE,
-        3,
-        ${tx.json({ entrega: { estado: 'no_enviado', cantidad: 0 } })}::jsonb
+        ${estadoId},
+        ${tx.json({ entrega: { estado: 'no_enviado', cantidad: 0 }, ...extra })}::jsonb
       )
       ON CONFLICT (usuario_id, programa_id) DO UPDATE
         SET estado = EXCLUDED.estado,
@@ -275,8 +278,7 @@ export async function obtenerPrograma(id) {
            pr.datos->>'clave_correlativa'             AS clave_correlativa,
            pr.datos->>'composicion'                   AS composicion,
            pr.datos->>'periodo'                       AS periodo,
-           pr.documentos_registro_requiere            AS documentos,
-           COALESCE(pr.datos->'criterios', '[]'::jsonb) AS criterios,
+           COALESCE(pr.requisitos, '[]'::jsonb) AS requisitos,
            COALESCE((SELECT array_agg(z.departamento_id ORDER BY z.departamento_id)
                      FROM programas_departamentos_ep z
                      WHERE z.programa_id = pr.id), '{}') AS zonas,
@@ -349,7 +351,7 @@ export function crearBeneficiario(d) {
         1,
         ${d.telefono},
         ${d.email || null},
-        ${tx.json({})}::jsonb
+        '{}'::jsonb
       )
       RETURNING id`;
         return { id: c.id };
@@ -393,7 +395,7 @@ export function actualizarBeneficiario(id, d) {
 /* ---------- Escritura: programas ---------- */
 // d: { nombre, entidad, tipo, estado, periodicidad (ids), descripcion, fechaInicio, fechaCierre,
 //      zonas [ids de departamento], cantidad, unidad, cupos, monto, clave, composicion,
-//      periodo, documentos, criterios [] }
+//      periodo, requisitos [{ nombre, tipo, obligatorio, opciones?, campo? }] -> columna programas_ed.requisitos (JSONB) }
 
 const datosPrograma = (d) => ({
     cantidad: d.cantidad,
@@ -402,7 +404,6 @@ const datosPrograma = (d) => ({
     monto: d.monto,
     composicion: d.composicion,
     periodo: d.periodo,
-    criterios: d.criterios,
 });
 
 const claveAuto = (id) => `PRG-AGR-02-${String(id).padStart(3, '0')}`;
@@ -422,10 +423,10 @@ export function crearPrograma(d) {
         const [p] = await tx`
       INSERT INTO programas_ed
         (nombre, entidad_responsable, estado, tipo_beneficio, descripcion_beneficio,
-         fecha_inicio, fecha_final, perioricidad, documentos_registro_requiere, datos)
+         fecha_inicio, fecha_final, perioricidad, requisitos, datos)
       VALUES
         (${d.nombre}, ${d.entidad}, ${d.estado}, ${d.tipo}, ${d.descripcion},
-         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${d.documentos},
+         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${tx.json(d.requisitos)}::jsonb,
          ${tx.json({ ...datosPrograma(d), clave_correlativa: d.clave || null })}::jsonb)
       RETURNING id`;
         if (!d.clave) {
@@ -460,7 +461,7 @@ export function actualizarPrograma(id, d) {
           fecha_inicio = ${d.fechaInicio},
           fecha_final = ${d.fechaCierre},
           perioricidad = ${d.periodicidad},
-          documentos_registro_requiere = ${d.documentos},
+          requisitos = ${tx.json(d.requisitos)}::jsonb,
           datos = COALESCE(datos, '{}'::jsonb)
                   || ${tx.json({ ...datosPrograma(d), clave_correlativa: clave })}::jsonb
       WHERE id = ${id}`;
@@ -481,4 +482,29 @@ export async function obtenerCatalogos() {
         sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
     ]);
     return { departamentos, municipios, entidades, tipos, estados, periodicidades };
+}
+
+/* ---------- Documentos de la cuenta (cuentas_beneficiarios_ed.datos.documentos) ---------- */
+export const normalizarTexto = (s) =>
+    String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+// Agrega { [tipo en minúsculas]: enlace } a datos.documentos.
+// Devuelve { ok, clave } | { noEncontrado } | { duplicado }.
+export function agregarDocumentoCuenta(id, tipo, enlace) {
+    return sql.begin(async (tx) => {
+        const [c] = await tx`
+      SELECT datos->'documentos' AS documentos
+      FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
+        if (!c) return { noEncontrado: true };
+
+        const actuales = c.documentos && !Array.isArray(c.documentos) ? c.documentos : {};
+        if (Object.keys(actuales).some((k) => normalizarTexto(k) === normalizarTexto(tipo))) return { duplicado: true };
+
+        const clave = String(tipo).trim().toLowerCase();
+        await tx`
+      UPDATE cuentas_beneficiarios_ed
+      SET datos = jsonb_set(COALESCE(datos, '{}'::jsonb), '{documentos}', ${tx.json({ ...actuales, [clave]: enlace })}::jsonb)
+      WHERE id = ${id}`;
+        return { ok: true, clave };
+    });
 }

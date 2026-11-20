@@ -41,7 +41,7 @@ async function cargarInfo() {
     $('iInicio').textContent = formatear(p.fecha_inicio);
     $('iFin').textContent = formatear(p.fecha_final);
     $('iZonas').textContent = formatear(p.zonas_nombres);
-    $('iDocumentos').textContent = formatear(p.documentos);
+    $('iRequisitos').textContent = formatear(p.requisitos);
     // 'cupos' ya se muestra arriba como cupos máximos.
     llenarLista($('iExtras'), aplanar(p.datos, ['cupos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
@@ -158,8 +158,7 @@ async function abrirEdicion() {
         periodo: programa.periodo,
         periodicidad_id: programa.periodicidad_id,
         zonas: programa.zonas,
-        criterios: programa.criterios,
-        documentos: programa.documentos,
+        requisitos: programa.requisitos,
     };
 
     const panel = $('panelEdicion');
@@ -188,6 +187,12 @@ async function guardarPrograma(e) {
 
 $('btnEditar').onclick = abrirEdicion;
 
+// El formulario vive en su propia página: inscribirse_en.html?id=<programa>
+function abrirInscripcion() {
+    window.open(`inscribirse_en.html?id=${encodeURIComponent(ID)}`, '_blank');
+}
+$('btnInscribirme').onclick = abrirInscripcion;
+
 $('btnCerrar').onclick = () => window.close();
 
 if (!ID) {
@@ -196,6 +201,7 @@ if (!ID) {
     (async () => {
         await cargarUsuario(); // el rol define si se muestra Editar
         if (usuario?.rol === 'admin') $('btnEditar').classList.remove('oculto');
+        if (usuario?.rol === 'beneficiario') $('btnInscribirme').classList.remove('oculto');
         await Promise.all([cargarInfo(), cargarGraficos()]);
     })().catch((e) => mensaje(p_mensaje,e.message));
 }

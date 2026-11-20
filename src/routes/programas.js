@@ -19,6 +19,41 @@ const a = (fn) => (req, res) =>
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
+const TIPOS_REQUISITO = ['texto', 'numero', 'fecha', 'seleccion', 'booleano', 'archivo', 'cuenta'];
+const CAMPOS_CUENTA = ['identificacion', 'nacimiento', 'telefono', 'correo', 'departamento', 'municipio', 'direccion'];
+
+// Requisitos de inscripción: se guardan en programas_ed.requisitos.
+function limpiarRequisitos(lista) {
+    if (!Array.isArray(lista)) return [];
+    return lista.slice(0, 30).map((r) => {
+        const tipo = String(r?.tipo ?? '');
+        const requisito = {
+            nombre: String(r?.nombre ?? '').trim().slice(0, 120),
+            tipo,
+            obligatorio: r?.obligatorio !== false,
+        };
+        if (tipo === 'seleccion') {
+            requisito.opciones = Array.isArray(r.opciones)
+                ? r.opciones.map((o) => String(o).trim().slice(0, 100)).filter(Boolean).slice(0, 30)
+                : [];
+        }
+        if (tipo === 'cuenta') requisito.campo = String(r.campo ?? '');
+        return requisito;
+    });
+}
+
+function errorRequisitos(requisitos) {
+    for (const r of requisitos) {
+        if (!TIPOS_REQUISITO.includes(r.tipo)) return 'Un requisito tiene un tipo no válido.';
+        if (!r.nombre) return 'Todos los requisitos deben tener nombre.';
+        if (r.tipo === 'seleccion' && r.opciones.length < 2) return `El requisito "${r.nombre}" necesita al menos dos opciones.`;
+        if (r.tipo === 'cuenta' && !CAMPOS_CUENTA.includes(r.campo)) return 'Un requisito toma un dato de la cuenta no válido.';
+    }
+    const nombres = requisitos.map((r) => r.nombre.toLowerCase());
+    if (new Set(nombres).size !== nombres.length) return 'Hay requisitos con el mismo nombre.';
+    return null;
+}
+
 function limpiar(body) {
     const t = (v) => String(v ?? '').trim();
     const n = (v) => (v === '' || v == null ? NaN : Number(v));
@@ -36,8 +71,7 @@ function limpiar(body) {
         clave: t(body.claveCorrelativa),
         composicion: t(body.composicion),
         periodo: t(body.periodo),                // Período de asignación
-        documentos: t(body.documentos),          // documentos_registro_requiere
-        criterios: Array.isArray(body.criterios) ? body.criterios.map(String) : [],
+        requisitos: limpiarRequisitos(body.requisitos),
         fechaInicio: t(body.fechaInicio),
         fechaCierre: t(body.fechaCierre),
         zonas: Array.isArray(body.zonas) ? [...new Set(body.zonas.map(Number))] : [], // ids de departamentos_ec
@@ -50,7 +84,6 @@ function validar(d) {
         'unidad',
         'composicion',
         'periodo',
-        'documentos',
         'fechaInicio',
         'fechaCierre'];
     if (textos.some((c) => !d[c]) || [d.entidad, d.tipo, d.estado, d.periodicidad].some((v) => !Number.isInteger(v)) || !d.zonas.length)
@@ -73,8 +106,7 @@ function validar(d) {
     if (d.fechaCierre < d.fechaInicio) {
         return 'La fecha de cierre no puede ser anterior a la fecha de inicio.';
     }
-
-    return null;
+    return errorRequisitos(d.requisitos);
 }
 
 const idValido = (req, res, next) => {
@@ -134,12 +166,12 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
 }));
 
 router.delete('/:id', admin, idValido, a(async (req, res) => {
-  const { cancelarPrograma } = await db();
-  const r = await cancelarPrograma(req.programaId);
-  if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
-  if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-  if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
-  res.json({ ok: true, mensaje: 'Programa cancelado.' });
+    const { cancelarPrograma } = await db();
+    const r = await cancelarPrograma(req.programaId);
+    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+    if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
+    res.json({ ok: true, mensaje: 'Programa cancelado.' });
 }));
 
 module.exports = router;
