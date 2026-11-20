@@ -1,7 +1,9 @@
 // Uso: beneficiario.html?id=<uuid de cuentas_beneficiarios_ed>
 const ID = new URLSearchParams(location.search).get('id');
 const API = `/api/beneficiarios/${encodeURIComponent(ID)}`;
-const $ = (id) => document.getElementById(id);
+// en este element salen los errores
+const p_mensaje = $('mensaje');
+
 
 let usuario = null; // sesión actual (/api/auth/me)
 let perfil = null;  // datos cargados del beneficiario
@@ -12,72 +14,6 @@ const RETIROS = {
     retirarB: 'Retirado por el beneficiario',
     retirarS: 'Retirado por el personal',
 };
-
-// common.js
-function aviso(texto, tipo = 'error') {
-    const m = $('mensaje');
-    m.textContent = texto;
-    m.className = `mensaje visible ${tipo}`;
-}
-
-// El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
-async function pedir(url, opciones = {}) {
-    const r = await fetch(url, {
-        credentials: 'same-origin',
-        ...opciones,
-        headers: { 'Content-Type': 'application/json', ...(opciones.headers || {}) },
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-    return j.datos ?? j.dato ?? j;
-}
-
-// ---- jsonb -> lista de [etiqueta, texto] ----
-const humanizar = (k) => {
-    const s = String(k).replace(/_/g, ' ');
-    return s.charAt(0).toUpperCase() + s.slice(1);
-};
-
-function formatear(v) {
-    if (v === null || v === undefined || v === '') return 'Sin dato';
-    if (typeof v === 'boolean') return v ? 'Sí' : 'No';
-    if (Array.isArray(v)) {
-        return v.length ? v.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ') : 'Sin dato';
-    }
-    return String(v);
-}
-
-// Aplana un objeto jsonb; `omitir` lleva rutas como 'entrega.estado'.
-function aplanar(obj, omitir = [], ruta = '', etiquetaPadre = '') {
-    const filas = [];
-    Object.entries(obj ?? {}).forEach(([k, v]) => {
-        const r = ruta ? `${ruta}.${k}` : k;
-        if (omitir.includes(r)) return;
-        const etiqueta = etiquetaPadre ? `${etiquetaPadre} · ${humanizar(k)}` : humanizar(k);
-        if (v && typeof v === 'object' && !Array.isArray(v)) filas.push(...aplanar(v, omitir, r, etiqueta));
-        else filas.push([etiqueta, formatear(v)]);
-    });
-    return filas;
-}
-
-function llenarLista(ul, filas) {
-    ul.replaceChildren();
-    if (!filas.length) {
-        const li = document.createElement('li');
-        li.textContent = 'No hay datos adicionales.';
-        ul.appendChild(li);
-        return;
-    }
-    filas.forEach(([etiqueta, valor]) => {
-        const li = document.createElement('li');
-        const s = document.createElement('span');
-        s.textContent = etiqueta;
-        const b = document.createElement('b');
-        b.textContent = valor;
-        li.append(s, b);
-        ul.appendChild(li);
-    });
-}
 
 function celda(tr, texto, clase) {
     const td = document.createElement('td');
@@ -95,9 +31,9 @@ function abrirSeguro(url) {
     try {
         const u = new URL(url, location.origin);
         if (u.protocol === 'http:' || u.protocol === 'https:') window.open(u.href, '_blank', 'noopener');
-        else aviso('Enlace no válido.');
+        else mensaje(p_mensaje ,'Enlace no válido.');
     } catch {
-        aviso('Enlace no válido.');
+        mensaje(p_mensaje ,'Enlace no válido.');
     }
 }
 
@@ -118,7 +54,7 @@ function sinImagen() {
     ph.className = 'perfil-img';
     ph.style.cssText = 'display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;';
     ph.textContent = 'Sin imagen del documento';
-    img.replaceWith(ph);
+    img?.replaceWith(ph);
 }
 
 async function cargarPerfil() {
@@ -137,7 +73,9 @@ async function cargarPerfil() {
     // Lo ya mostrado en otras partes de la página no se repite.
     llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
-    $('btnInactivar').classList.toggle('oculto', !(esStaff() && p.estado_cuenta !== 'inactivada'));
+    const btn = $('btnInactivar');
+    btn.classList.toggle('oculto', !esStaff());
+    btn.textContent = p.estado_cuenta === 'inactivada' ? 'Reactivar cuenta' : 'Inactivar cuenta';
 
     const img = $('imgDocumento');
     if (p.imagen_documento) {
@@ -184,8 +122,8 @@ async function cargarProgramas() {
                 try {
                     const r = await pedir(`${API}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
                     await cargarProgramas();
-                    aviso(r.mensaje || 'Inscripción retirada.', 'exito');
-                } catch (e) { aviso(e.message); }
+                    mensaje(p_mensaje ,r.mensaje || 'Inscripción retirada.', 'exito');
+                } catch (e) { mensaje(p_mensaje ,e.message); }
             };
             td.appendChild(b);
         }
@@ -251,10 +189,10 @@ async function mostrarSelector(td, actuales) {
                     body: JSON.stringify({ programa_id: sel.value }),
                 });
                 await cargarProgramas();
-            } catch (e) { aviso(e.message); }
+            } catch (e) { mensaje(p_mensaje ,e.message); }
         };
         td.append(sel, ok);
-    } catch (e) { aviso(e.message); }
+    } catch (e) { mensaje(p_mensaje ,e.message); }
 }
 
 /* Documentos: [{ tipo, nombre_archivo, url }] */
@@ -298,7 +236,7 @@ async function abrirEdicion() {
     if (!perfil) return;
     try {
         await cargarCatalogos();
-    } catch (e) { return aviso(e.message); }
+    } catch (e) { return mensaje(p_mensaje ,e.message); }
 
     const d = {
         id: ID,
@@ -309,6 +247,7 @@ async function abrirEdicion() {
         telefono: perfil.telefono,
         correo: perfil.correo,
         departamento_id: perfil.departamento_id,
+        municipio_id: perfil.municipio_id,
         municipio: perfil.municipio,
         direccion: perfil.direccion,
     };
@@ -333,29 +272,33 @@ async function guardarBeneficiario(e) {
         const r = await enviarJSON(API, 'PUT', valoresFormulario(e.currentTarget));
         cerrarEdicion();
         await cargarPerfil();
-        aviso(r.mensaje || 'Información actualizada.', 'exito');
-    } catch (err) { aviso(err.message); }
+        mensaje(p_mensaje ,r.mensaje || 'Información actualizada.', 'exito');
+    } catch (err) { mensaje(p_mensaje ,err.message); }
 }
 
 $('btnEditar').onclick = abrirEdicion;
 
 // No se elimina la cuenta: su estado pasa a 'inactivada'.
 $('btnInactivar').onclick = async () => {
-    if (!confirm('¿Inactivar la cuenta de este beneficiario?')) return;
+    const reactivar = perfil?.estado_cuenta === 'inactivada';
+    const verbo = reactivar ? 'Reactivar' : 'Inactivar';
+    if (!confirm(`¿${verbo} la cuenta de este beneficiario?`)) return;
     try {
-        const r = await pedir(API, { method: 'DELETE' });
+        const r = reactivar
+            ? await pedir(`${API}/reactivar`, { method: 'PATCH' })
+            : await pedir(API, { method: 'DELETE' });
         await cargarPerfil();
-        aviso(r.mensaje || 'Cuenta inactivada.', 'exito');
-    } catch (e) { aviso(e.message); }
+        mensaje(p_mensaje ,r.mensaje || `Cuenta ${reactivar ? 'reactivada' : 'inactivada'}.`, 'exito');
+    } catch (e) { mensaje(p_mensaje, e.message); }
 };
 $('btnCerrar').onclick = () => window.close();
 
 if (!ID) {
-    aviso('Falta el ID del beneficiario.');
+    mensaje(p_mensaje ,'Falta el ID del beneficiario.');
 } else {
     (async () => {
         await cargarUsuario(); // el rol define qué botones se muestran
         if (puedeEditar()) $('btnEditar').classList.remove('oculto');
         await Promise.all([cargarPerfil(), cargarProgramas(), cargarDocumentos()]);
-    })().catch((e) => aviso(e.message));
+    })().catch((e) => mensaje(p_mensaje ,e.message));
 }

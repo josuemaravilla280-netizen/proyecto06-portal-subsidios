@@ -46,16 +46,18 @@ export function listarBeneficiarios() {
            p.nombre,
            p.apellido,
            p.departamento_residencia    AS departamento_id,
-           d.name                     AS departamento,
+           d.name                       AS departamento,
            to_char(p.nacimiento, 'YYYY-MM-DD') AS nacimiento,
-           c.datos->>'municipio'        AS municipio,
-           c.datos->>'direccion'        AS direccion,
+           m.name                       AS municipio,
+           p.municipio_residencia       AS municipio_id,
+           p.direccion                  AS direccion,
            c.telefono                   AS telefono,
            c.email                      AS correo,
            ec.name                      AS estado
     FROM cuentas_beneficiarios_ed c
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
+    JOIN municipios_ec m ON m.id = p.municipio_residencia
     JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
     ORDER BY p.apellido, p.nombre`;
 }
@@ -64,9 +66,9 @@ export async function obtenerBeneficiario(id) {
     const [fila] = await sql`
     SELECT c.id,
            p.nombre || ' ' || p.apellido                         AS nombre,
-           d.name                                              AS departamento,
-           c.datos->>'municipio'                                 AS municipio,
-           c.datos->>'direccion'                                 AS direccion,
+           d.name                                                AS departamento,
+           m.name                                                AS municipio,
+           p.direccion                                           AS direccion,
            EXTRACT(YEAR FROM age(p.nacimiento))::int             AS edad,
            CASE WHEN p.is_dui THEN p.documento_unico END         AS numero_documento,
            CASE WHEN NOT p.is_dui THEN p.documento_unico END     AS numero_pasaporte,
@@ -75,6 +77,7 @@ export async function obtenerBeneficiario(id) {
            p.apellido                                            AS apellido,
            p.documento_unico                                     AS documento_unico,
            p.departamento_residencia                             AS departamento_id,
+           p.municipio_residencia                                AS municipio_id,
            c.telefono                                            AS telefono,
            c.email                                               AS correo,
            to_char(p.nacimiento, 'YYYY-MM-DD')                   AS fecha_nacimiento,
@@ -84,6 +87,7 @@ export async function obtenerBeneficiario(id) {
     JOIN personas_ed p      ON p.documento_unico = c.persona_documento
     JOIN departamentos_ec d ON d.id = p.departamento_residencia
     JOIN estados_cuentas_empresas_ec ec ON ec.id = c.estado
+    JOIN municipios_ec m ON m.id = p.municipio_residencia
     WHERE c.id = ${id}`;
     return fila ?? null;
 }
@@ -123,14 +127,11 @@ export async function programasDeBeneficiario(id) {
 }
 
 // cuentas_beneficiarios_ed.datos: { "documentos": [{ "tipo", "nombre_archivo", "url" }] }
-export async function documentosDeBeneficiario(id) {
+export async function beneficiarioDocuments(id) {
     const [fila] = await sql`
     SELECT COALESCE(datos->'documentos', '[]'::jsonb) AS documentos
     FROM cuentas_beneficiarios_ed WHERE id = ${id}`;
     return fila ? fila.documentos : null;
-    array.forEach(element => {
-        
-    });
 }
 
 const TABLA_ESTADOS = {
@@ -155,6 +156,17 @@ export function inactivarCuenta(id) {
         return { ok: true };
     });
 }
+export function reactivarCuenta(id) {
+    return sql.begin(async (tx) => {
+        const activa = await idEstado(tx, 'cuenta', 'activa');
+        if (activa === null) return { estadoFaltante: 'activa' };
+        const [c] = await tx`SELECT estado FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
+        if (!c) return { noEncontrado: true };
+        if (c.estado === activa) return { yaEstaba: true };
+        await tx`UPDATE cuentas_beneficiarios_ed SET estado = ${activa} WHERE id = ${id}`;
+        return { ok: true };
+    });
+}
 
 export function cancelarPrograma(id) {
     return sql.begin(async (tx) => {
@@ -164,6 +176,17 @@ export function cancelarPrograma(id) {
         if (!p) return { noEncontrado: true };
         if (p.estado === cancelado) return { yaEstaba: true };
         await tx`UPDATE programas_ed SET estado = ${cancelado} WHERE id = ${id}`;
+        return { ok: true };
+    });
+}
+export function reactivarPrograma(id) {
+    return sql.begin(async (tx) => {
+        const activo = await idEstado(tx, 'programa', 'activo');
+        if (activo === null) return { estadoFaltante: 'activo' };
+        const [p] = await tx`SELECT estado FROM programas_ed WHERE id = ${id} FOR UPDATE`;
+        if (!p) return { noEncontrado: true };
+        if (p.estado === activo) return { yaEstaba: true };
+        await tx`UPDATE programas_ed SET estado = ${activo} WHERE id = ${id}`;
         return { ok: true };
     });
 }
@@ -190,9 +213,9 @@ export function retirarInscripcion(id, programaId, quien) {
 const RETIRADAS = sql`(SELECT id FROM estados_incripciones_ec WHERE name IN ('retirarB', 'retirarS'))`;
 
 
-
+// 'enespera' si solicita el beneficiario, 'aprovada' si registra el personal).
 // true si se creó, false si ya estaba
-export function crearInscripcion(id, programaId) {
+export function crearInscripcion(id, programaId, extra = {}, estado = 'enespera') {
     return sql.begin(async (tx) => {
         const [pr] = await tx`
       SELECT ep.name AS estado
@@ -201,12 +224,15 @@ export function crearInscripcion(id, programaId) {
         if (!pr) return { programaNoExiste: true };
         if (pr.estado === 'cancelado_incompletado') return { programaCancelado: true };
 
+        const estadoId = await idEstado(tx, 'inscripcion', estado);
+        if (estadoId === null) return { estadoFaltante: estado };
+
         const filas = await tx`
       INSERT INTO inscripciones_ed (usuario_id, programa_id, fecha_solicitud, estado, datos)
       VALUES (
         ${id}, ${programaId}, CURRENT_DATE,
-        3,
-        ${tx.json({ entrega: { estado: 'no_enviado', cantidad: 0 } })}::jsonb
+        ${estadoId},
+        ${tx.json({ entrega: { estado: 'no_enviado', cantidad: 0 }, ...extra })}::jsonb
       )
       ON CONFLICT (usuario_id, programa_id) DO UPDATE
         SET estado = EXCLUDED.estado,
@@ -222,8 +248,6 @@ export function crearInscripcion(id, programaId) {
 /* ---------- Programas ---------- */
 // programas_ed.datos: { cantidad, unidad, cupos, monto, clave_correlativa,
 //                       composicion, periodo, criterios }
-
-// "2 cajas · Arroz, frijol y aceite"
 const ENTREGA = sql`concat_ws(' · ',
   nullif(trim(concat_ws(' ', pr.datos->>'cantidad', pr.datos->>'unidad')), ''),
   nullif(pr.datos->>'composicion', ''))`;
@@ -276,8 +300,7 @@ export async function obtenerPrograma(id) {
            pr.datos->>'clave_correlativa'             AS clave_correlativa,
            pr.datos->>'composicion'                   AS composicion,
            pr.datos->>'periodo'                       AS periodo,
-           pr.documentos_registro_requiere            AS documentos,
-           COALESCE(pr.datos->'criterios', '[]'::jsonb) AS criterios,
+           COALESCE(pr.requisitos, '[]'::jsonb) AS requisitos,
            COALESCE((SELECT array_agg(z.departamento_id ORDER BY z.departamento_id)
                      FROM programas_departamentos_ep z
                      WHERE z.programa_id = pr.id), '{}') AS zonas,
@@ -295,16 +318,16 @@ export async function obtenerPrograma(id) {
 }
 
 export async function estadisticasPrograma(id) {
-  const [prog] = await sql`
+    const [prog] = await sql`
     SELECT (datos->>'cupos')::int AS cupos FROM programas_ed WHERE id = ${id}`;
-  if (!prog) return null;
-  const [e] = await sql`
+    if (!prog) return null;
+    const [e] = await sql`
     SELECT count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'no_recibido')::int AS enviados,
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'recibido')::int    AS recibidos,
            count(*) FILTER (WHERE datos->'entrega'->>'estado' = 'no_enviado')::int  AS pendientes,
            count(*)::int                                                            AS cupos_ocupados
     FROM inscripciones_ed WHERE programa_id = ${id} AND estado NOT IN ${RETIRADAS}`;
-  return { ...e, cupos_disponibles: Math.max((prog.cupos ?? 0) - e.cupos_ocupados, 0) };
+    return { ...e, cupos_disponibles: Math.max((prog.cupos ?? 0) - e.cupos_ocupados, 0) };
 }
 
 /* ---------- Escritura: beneficiarios ---------- */
@@ -319,6 +342,14 @@ async function buscarDepartamento(tx, valor) {
     return dep ?? null;
 }
 
+// El municipio debe existir y pertenecer al departamento elegido.
+async function buscarMunicipio(tx, valor, departamentoId) {
+    const [mun] = await tx`
+    SELECT id FROM municipios_ec
+    WHERE id = ${Number(valor)} AND departamento = ${departamentoId}`;
+    return mun ?? null;
+}
+
 export function crearBeneficiario(d) {
     return sql.begin(async (tx) => {
         const [existe] = await tx`
@@ -327,10 +358,12 @@ export function crearBeneficiario(d) {
 
         const dep = await buscarDepartamento(tx, d.departamento);
         if (!dep) return { departamentoInvalido: true };
+        const mun = await buscarMunicipio(tx, d.municipio, dep.id);
+        if (!mun) return { municipioInvalido: true };
 
         await tx`
-      INSERT INTO personas_ed (documento_unico, is_dui, nombre, apellido, departamento_residencia, nacimiento)
-      VALUES (${d.documento}, ${d.isDui}, ${d.nombre}, ${d.apellido}, ${dep.id}, ${d.nacimiento})
+      INSERT INTO personas_ed (documento_unico, is_dui, nombre, apellido, departamento_residencia, municipio_residencia, direccion, nacimiento)
+      VALUES (${d.documento}, ${d.isDui}, ${d.nombre}, ${d.apellido}, ${dep.id}, ${mun.id},${d.direccion}, ${d.nacimiento})
       ON CONFLICT (documento_unico) DO NOTHING`;
 
         const [c] = await tx`
@@ -340,13 +373,12 @@ export function crearBeneficiario(d) {
         1,
         ${d.telefono},
         ${d.email || null},
-        ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
+        '{}'::jsonb
       )
       RETURNING id`;
         return { id: c.id };
     });
 }
-
 
 // El documento no se modifica (es la clave primaria de personas_ed).
 export function actualizarBeneficiario(id, d) {
@@ -358,12 +390,16 @@ export function actualizarBeneficiario(id, d) {
 
         const dep = await buscarDepartamento(tx, d.departamento);
         if (!dep) return { departamentoInvalido: true };
+        const mun = await buscarMunicipio(tx, d.municipio, dep.id);
+        if (!mun) return { municipioInvalido: true };
 
         await tx`
       UPDATE personas_ed
       SET nombre = ${d.nombre},
           apellido = ${d.apellido},
           departamento_residencia = ${dep.id},
+          municipio_residencia = ${mun.id},
+          direccion = ${d.direccion},
           nacimiento = COALESCE(${d.nacimiento ?? null}::date, nacimiento)
       WHERE documento_unico = ${c.persona_documento}`;
 
@@ -371,8 +407,8 @@ export function actualizarBeneficiario(id, d) {
       UPDATE cuentas_beneficiarios_ed
       SET telefono = ${d.telefono},
           email = ${d.email || null},
-          datos = COALESCE(datos, '{}'::jsonb)
-                  || ${tx.json({ municipio: d.municipio, direccion: d.direccion })}::jsonb
+                    datos = COALESCE(datos, '{}'::jsonb)
+                  || ${tx.json({})}::jsonb
       WHERE id = ${id}`;
         return { id };
     });
@@ -381,7 +417,7 @@ export function actualizarBeneficiario(id, d) {
 /* ---------- Escritura: programas ---------- */
 // d: { nombre, entidad, tipo, estado, periodicidad (ids), descripcion, fechaInicio, fechaCierre,
 //      zonas [ids de departamento], cantidad, unidad, cupos, monto, clave, composicion,
-//      periodo, documentos, criterios [] }
+//      periodo, requisitos [{ nombre, tipo, obligatorio, opciones?, campo? }] -> columna programas_ed.requisitos (JSONB) }
 
 const datosPrograma = (d) => ({
     cantidad: d.cantidad,
@@ -390,7 +426,6 @@ const datosPrograma = (d) => ({
     monto: d.monto,
     composicion: d.composicion,
     periodo: d.periodo,
-    criterios: d.criterios,
 });
 
 const claveAuto = (id) => `PRG-AGR-02-${String(id).padStart(3, '0')}`;
@@ -410,10 +445,10 @@ export function crearPrograma(d) {
         const [p] = await tx`
       INSERT INTO programas_ed
         (nombre, entidad_responsable, estado, tipo_beneficio, descripcion_beneficio,
-         fecha_inicio, fecha_final, perioricidad, documentos_registro_requiere, datos)
+         fecha_inicio, fecha_final, perioricidad, requisitos, datos)
       VALUES
         (${d.nombre}, ${d.entidad}, ${d.estado}, ${d.tipo}, ${d.descripcion},
-         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${d.documentos},
+         ${d.fechaInicio}, ${d.fechaCierre}, ${d.periodicidad}, ${tx.json(d.requisitos)}::jsonb,
          ${tx.json({ ...datosPrograma(d), clave_correlativa: d.clave || null })}::jsonb)
       RETURNING id`;
         if (!d.clave) {
@@ -448,7 +483,7 @@ export function actualizarPrograma(id, d) {
           fecha_inicio = ${d.fechaInicio},
           fecha_final = ${d.fechaCierre},
           perioricidad = ${d.periodicidad},
-          documentos_registro_requiere = ${d.documentos},
+          requisitos = ${tx.json(d.requisitos)}::jsonb,
           datos = COALESCE(datos, '{}'::jsonb)
                   || ${tx.json({ ...datosPrograma(d), clave_correlativa: clave })}::jsonb
       WHERE id = ${id}`;
@@ -459,27 +494,39 @@ export function actualizarPrograma(id, d) {
     });
 }
 
-// No elimina programas con beneficiarios inscritos.
-// export function eliminarPrograma(id) {
-//     return sql.begin(async (tx) => {
-//         const [p] = await tx`SELECT id FROM programas_ed WHERE id = ${id} FOR UPDATE`;
-//         if (!p) return { noEncontrado: true };
-//         const [{ n }] = await tx`SELECT count(*)::int AS n FROM inscripciones_ed WHERE programa_id = ${id}`;
-//         if (n > 0) return { conInscritos: true };
-//         await tx`DELETE FROM programas_departamentos_ep WHERE programa_id = ${id}`;
-//         await tx`DELETE FROM programas_ed WHERE id = ${id}`;
-//         return { ok: true };
-//     });
-// }
-
-// Todas se devuelven como { id, nombre }.
 export async function obtenerCatalogos() {
-    const [departamentos, entidades, tipos, estados, periodicidades] = await Promise.all([
+    const [departamentos, municipios, entidades, tipos, estados, periodicidades] = await Promise.all([
         sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
+        sql`SELECT id, departamento AS departamento_id, name AS nombre FROM municipios_ec ORDER BY name`,
         sql`SELECT id, nombre FROM empresas_ed ORDER BY nombre`,
         sql`SELECT id, name AS nombre FROM tipos_beneficios_ec ORDER BY id`,
         sql`SELECT id, name AS nombre FROM estados_programa_ec ORDER BY id`,
         sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
     ]);
-    return { departamentos, entidades, tipos, estados, periodicidades };
+    return { departamentos, municipios, entidades, tipos, estados, periodicidades };
+}
+
+/* ---------- Documentos de la cuenta (cuentas_beneficiarios_ed.datos.documentos) ---------- */
+export const normalizarTexto = (s) =>
+    String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+// Agrega { [tipo en minúsculas]: enlace } a datos.documentos.
+// Devuelve { ok, clave } | { noEncontrado } | { duplicado }.
+export function agregarDocumentoCuenta(id, tipo, enlace) {
+    return sql.begin(async (tx) => {
+        const [c] = await tx`
+      SELECT datos->'documentos' AS documentos
+      FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
+        if (!c) return { noEncontrado: true };
+
+        const actuales = c.documentos && !Array.isArray(c.documentos) ? c.documentos : {};
+        if (Object.keys(actuales).some((k) => normalizarTexto(k) === normalizarTexto(tipo))) return { duplicado: true };
+
+        const clave = String(tipo).trim().toLowerCase();
+        await tx`
+      UPDATE cuentas_beneficiarios_ed
+      SET datos = jsonb_set(COALESCE(datos, '{}'::jsonb), '{documentos}', ${tx.json({ ...actuales, [clave]: enlace })}::jsonb)
+      WHERE id = ${id}`;
+        return { ok: true, clave };
+    });
 }

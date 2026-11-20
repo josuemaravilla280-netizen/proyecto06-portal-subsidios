@@ -49,6 +49,7 @@ CREATE TABLE personas_ed (
     apellido                VARCHAR(250) NOT NULL,
     departamento_residencia INTEGER NOT NULL REFERENCES departamentos_ec(id),
     municipio_residencia    INTEGER NOT NULL REFERENCES municipios_ec(id),
+    direccion               VARCHAR(250) NOT NULL,
     nacimiento              DATE NOT NULL
 );
 
@@ -112,8 +113,8 @@ CREATE TABLE inscripciones_ed (
 -- mini log --
 CREATE TABLE tiny_log(
     is_staff           BOOLEAN,
-    staff_actor        UUID REFERENCES cuentas_staff_ed(id),
-    beneficiario_actor UUID REFERENCES cuentas_beneficiarios_ed(id),
+    staff_actor        UUID NOT NULL REFERENCES cuentas_staff_ed(id),
+    beneficiario_actor UUID NOT NULL REFERENCES cuentas_beneficiarios_ed(id),
 	action_description NOT NULL VARCHAR(250)
 
     CONSTRAINT chk_actor_type CHECK (
