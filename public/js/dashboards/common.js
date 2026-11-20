@@ -1,5 +1,17 @@
 const $ = (id) => document.getElementById(id);
 
+// El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
+async function pedir(url, opciones = {}) {
+    const r = await fetch(url, {
+        credentials: 'same-origin',
+        ...opciones,
+        headers: { 'Content-Type': 'application/json', ...(opciones.headers || {}) },
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
+    return j.datos ?? j.dato ?? j;
+}
+
 // ---- jsonb -> lista de [etiqueta, texto] ----
 const humanizar = (k) => {
     const s = String(k).replace(/_/g, ' ');

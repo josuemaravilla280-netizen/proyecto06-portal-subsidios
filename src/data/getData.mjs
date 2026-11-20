@@ -156,6 +156,17 @@ export function inactivarCuenta(id) {
         return { ok: true };
     });
 }
+export function reactivarCuenta(id) {
+    return sql.begin(async (tx) => {
+        const activa = await idEstado(tx, 'cuenta', 'activa');
+        if (activa === null) return { estadoFaltante: 'activa' };
+        const [c] = await tx`SELECT estado FROM cuentas_beneficiarios_ed WHERE id = ${id} FOR UPDATE`;
+        if (!c) return { noEncontrado: true };
+        if (c.estado === activa) return { yaEstaba: true };
+        await tx`UPDATE cuentas_beneficiarios_ed SET estado = ${activa} WHERE id = ${id}`;
+        return { ok: true };
+    });
+}
 
 export function cancelarPrograma(id) {
     return sql.begin(async (tx) => {
@@ -165,6 +176,17 @@ export function cancelarPrograma(id) {
         if (!p) return { noEncontrado: true };
         if (p.estado === cancelado) return { yaEstaba: true };
         await tx`UPDATE programas_ed SET estado = ${cancelado} WHERE id = ${id}`;
+        return { ok: true };
+    });
+}
+export function reactivarPrograma(id) {
+    return sql.begin(async (tx) => {
+        const activo = await idEstado(tx, 'programa', 'activo');
+        if (activo === null) return { estadoFaltante: 'activo' };
+        const [p] = await tx`SELECT estado FROM programas_ed WHERE id = ${id} FOR UPDATE`;
+        if (!p) return { noEncontrado: true };
+        if (p.estado === activo) return { yaEstaba: true };
+        await tx`UPDATE programas_ed SET estado = ${activo} WHERE id = ${id}`;
         return { ok: true };
     });
 }

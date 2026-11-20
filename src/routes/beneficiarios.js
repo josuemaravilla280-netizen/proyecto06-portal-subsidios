@@ -134,6 +134,14 @@ router.delete('/:id', operador, idValido, a(async (req, res) => {
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está inactivada.' });
     res.json({ ok: true, mensaje: 'Cuenta inactivada.' });
 }));
+router.patch('/:id/reactivar', operador, idValido, a(async (req, res) => {
+    const { reactivarCuenta } = await db();
+    const r = await reactivarCuenta(req.params.id);
+    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+    if (r.noEncontrado) return noEncontrado(res);
+    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está activa.' });
+    res.json({ ok: true, mensaje: 'Cuenta reactivada.' });
+}));
 
 // Documentos subidos
 router.get('/:id/documentos', ...conAcceso, idValido, a(async (req, res) => {

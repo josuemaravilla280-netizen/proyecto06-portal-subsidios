@@ -15,19 +15,6 @@ const RETIROS = {
     retirarS: 'Retirado por el personal',
 };
 
-
-// El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
-async function pedir(url, opciones = {}) {
-    const r = await fetch(url, {
-        credentials: 'same-origin',
-        ...opciones,
-        headers: { 'Content-Type': 'application/json', ...(opciones.headers || {}) },
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-    return j.datos ?? j.dato ?? j;
-}
-
 function celda(tr, texto, clase) {
     const td = document.createElement('td');
     td.textContent = texto;
@@ -86,7 +73,9 @@ async function cargarPerfil() {
     // Lo ya mostrado en otras partes de la página no se repite.
     llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
-    $('btnInactivar').classList.toggle('oculto', !(esStaff() && p.estado_cuenta !== 'inactivada'));
+    const btn = $('btnInactivar');
+    btn.classList.toggle('oculto', !esStaff());
+    btn.textContent = p.estado_cuenta === 'inactivada' ? 'Reactivar cuenta' : 'Inactivar cuenta';
 
     const img = $('imgDocumento');
     if (p.imagen_documento) {
@@ -291,12 +280,16 @@ $('btnEditar').onclick = abrirEdicion;
 
 // No se elimina la cuenta: su estado pasa a 'inactivada'.
 $('btnInactivar').onclick = async () => {
-    if (!confirm('¿Inactivar la cuenta de este beneficiario?')) return;
+    const reactivar = perfil?.estado_cuenta === 'inactivada';
+    const verbo = reactivar ? 'Reactivar' : 'Inactivar';
+    if (!confirm(`¿${verbo} la cuenta de este beneficiario?`)) return;
     try {
-        const r = await pedir(API, { method: 'DELETE' });
+        const r = reactivar
+            ? await pedir(`${API}/reactivar`, { method: 'PATCH' })
+            : await pedir(API, { method: 'DELETE' });
         await cargarPerfil();
-        mensaje(p_mensaje ,r.mensaje || 'Cuenta inactivada.', 'exito');
-    } catch (e) { mensaje(p_mensaje ,e.message); }
+        mensaje(p_mensaje ,r.mensaje || `Cuenta ${reactivar ? 'reactivada' : 'inactivada'}.`, 'exito');
+    } catch (e) { mensaje(p_mensaje, e.message); }
 };
 $('btnCerrar').onclick = () => window.close();
 

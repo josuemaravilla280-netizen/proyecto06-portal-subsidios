@@ -8,14 +8,6 @@ const p_mensaje = $('mensaje');
 let usuario = null; // sesión actual (/api/auth/me)
 let programa = null; // datos cargados del programa
 
-// El servidor responde { ok, datos } o { ok, dato } y, en error, { ok:false, mensaje }.
-async function pedir(url) {
-    const r = await fetch(url, { credentials: 'same-origin' });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-    return j.datos ?? j.dato ?? j;
-}
-
 async function cargarUsuario() {
     try {
         const r = await pedir('/api/auth/me');
@@ -45,6 +37,8 @@ async function cargarInfo() {
     // 'cupos' ya se muestra arriba como cupos máximos.
     llenarLista($('iExtras'), aplanar(p.datos, ['cupos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
+    const btn = $('btnCancelar');
+    btn.textContent = p.estado === 'cancelado_incompletado' ? 'Reactivar programa' : 'Cancelar programa';
 }
 
 function punto(cx, cy, r, ang) {
@@ -185,15 +179,28 @@ async function guardarPrograma(e) {
     } catch (err) { mensaje(p_mensaje,err.message); }
 }
 
-$('btnEditar').onclick = abrirEdicion;
-
 // El formulario vive en su propia página: inscribirse_en.html?id=<programa>
 function abrirInscripcion() {
     window.open(`../inscribirse_en.html?id=${encodeURIComponent(ID)}`, '_blank');
 }
+$('btnEditar').onclick = abrirEdicion;
+
 $('btnInscribirme').onclick = abrirInscripcion;
 
 $('btnCerrar').onclick = () => window.close();
+
+$('btnCancelar').onclick = async () => {
+    const cancelado = programa?.estado === 'cancelado_incompletado';
+    const verbo = cancelado ? 'Reactivar' : 'Cancelar';
+    if (!confirm(`¿${verbo} este programa?`)) return;
+    try {
+        const r = cancelado
+            ? await pedir(`${API}/reactivar`, { method: 'PATCH' })
+            : await pedir(API, { method: 'DELETE' });
+        await Promise.all([cargarInfo(), cargarGraficos()]);
+        mensaje(p_mensaje, r.mensaje || `Programa ${cancelado ? 'reactivado' : 'cancelado'}.`, 'exito');
+    } catch (e) { mensaje(p_mensaje, e.message); }
+};
 
 if (!ID) {
     mensaje(p_mensaje,'Falta el ID del programa.');
@@ -201,6 +208,7 @@ if (!ID) {
     (async () => {
         await cargarUsuario(); // el rol define si se muestra Editar
         if (usuario?.rol === 'admin') $('btnEditar').classList.remove('oculto');
+        if (usuario?.rol === 'admin') $('btnCancelar').classList.remove('oculto');
         if (usuario?.rol === 'beneficiario') $('btnInscribirme').classList.remove('oculto');
         await Promise.all([cargarInfo(), cargarGraficos()]);
     })().catch((e) => mensaje(p_mensaje,e.message));
