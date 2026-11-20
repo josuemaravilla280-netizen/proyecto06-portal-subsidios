@@ -173,5 +173,13 @@ router.delete('/:id', admin, idValido, a(async (req, res) => {
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
     res.json({ ok: true, mensaje: 'Programa cancelado.' });
 }));
+router.patch('/:id/reactivar', admin, idValido, a(async (req, res) => {
+    const { reactivarPrograma } = await db();
+    const r = await reactivarPrograma(req.programaId);
+    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+    if (r.noEncontrado) return noEncontrado(res);
+    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está activo.' });
+    res.json({ ok: true, mensaje: 'Programa reactivado.' });
+}));
 
 module.exports = router;

@@ -101,25 +101,6 @@ function addEditarButton(text, id) {
                     ${(usuarioActual.rol == "admin") || (usuarioActual.rol == "operador" && text == "beneficiario") ? "Editar" : "ver"}
                   </button>`
 }
-function addCancelarButton(id) {
-    return `                  <button
-                    class="btn"
-                    data-cancelar-programa="${id}"
-                  >
-                    Cancelar
-                  </button>`
-}
-function addSolicitarButton(id) {
-    return `
-                  <button
-                    class="btn"
-                    solicitar-inscripcion-en-programa="${id}"
-                  >
-                    ${usuarioActual.rol == "beneficiario" ? "Solicitar" : "Registrar a"}
-                  </button>`
-    // Esto es important que, el beneficiario puede solicitar registro en un programa
-    // y el staff puede registrar o poner a espera de revicion una solicitud de registro
-}
 
 // Muestra la aplicación después de iniciar sesión.
 async function mostrarAplicacion() {
@@ -187,11 +168,11 @@ function inicio() {
       Ha iniciado sesión correctamente.
     </p>
   `;
-  if (usuarioActual.rol == "beneficiario"){
+    if (usuarioActual.rol == "beneficiario") {
         const btn = document.createElement('button');
         btn.innerText = "Ver mis datos";
         btn.className = "btn";
-        btn.onclick= () => window.location.href = `/dashboards/beneficiario.html?id=${encodeURIComponent(usuarioActual.id)}`;
+        btn.onclick = () => window.location.href = `/dashboards/beneficiario.html?id=${encodeURIComponent(usuarioActual.id)}`;
         vista.appendChild(btn);
     }
 
@@ -235,8 +216,8 @@ async function vistaBeneficiarios() {
         guardarBeneficiario
     );
     $('#cancelarBeneficiario').addEventListener('click', () => {
-            $('#formBeneficiario').reset();
-        });
+        $('#formBeneficiario').reset();
+    });
 
     await cargarBeneficiarios();
 }
@@ -439,8 +420,6 @@ async function cargarProgramas() {
               <td>
                 <div class="acciones-fila">
                   ${addEditarButton("programa", p.id)}
-                  ${usuarioActual.rol == "admin" ? addCancelarButton(p.id) : ""}
-                  ${addSolicitarButton(p.id)}
                 </div>
               </td>
             </tr>
@@ -457,39 +436,12 @@ async function cargarProgramas() {
                     );
                 });
             });
-        // Asigna la acción de eliminación a cada programa.
-        cont.querySelectorAll('[data-cancelar-programa]')
-            .forEach((boton) => {
-                boton.addEventListener('click', () => {
-                    cancelarPrograma(Number(boton.dataset.cancelarPrograma));
-                });
-            });
     } catch (err) {
         mostrarMensajeVista(err.message);
     }
 }
 
 // Aqui estaba la funcion `editarPrograma`
-
-// Elimina un programa después de confirmar la acción.
-async function cancelarPrograma(id) {
-    if (!confirm('¿Está seguro de cancelar este programa?')) {
-        return;
-    }
-
-    try {
-        const r = await api(`/api/programas/${id}`, {
-            method: 'DELETE'
-        });
-
-        mostrarMensajeVista(r.mensaje, 'exito');
-
-        await cargarProgramas();
-    } catch (err) {
-        mostrarMensajeVista(err.message);
-    }
-}
-
 
 // Comprueba si existe una sesión activa al cargar la página.
 (async function comprobarSesion() {

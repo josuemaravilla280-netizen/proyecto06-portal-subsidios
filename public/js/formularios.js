@@ -1,9 +1,4 @@
 // esto se  carga antes del script de cada dashboard y de app.js.
-function escapar(valor = '') {
-    return String(valor).replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    })[c]);
-}
 
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
 
@@ -233,7 +228,8 @@ function formPrograma(d = {}) {
 
         ${campo('Monto por asignación (USD)', 'monto', d.monto ?? 0, 'number', '0', 'min="0" step="0.01"')}
 
-        ${campo('Clave correlativa', 'claveCorrelativa', d.claveCorrelativa, 'text', 'Se genera automáticamente', 'readonly')}
+        <!--${campo('Clave correlativa', 'claveCorrelativa', d.claveCorrelativa, 'text', 'Se genera automáticamente', 'readonly')} -->
+        <p>Se generara una clave correlativa</p>
 
         <div class="field full">
           <label for="composicion">Composición del paquete *</label>
