@@ -1,77 +1,93 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entrega y Asignación de Beneficios</title>
-    <link rel="stylesheet" href="css/estilos.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Entrega y Asignación de Beneficios</title>
+  <link rel="stylesheet" href="css/estilos.css">
 </head>
+
 <body>
 
-    <div class="container">
+  <div class="panel-app">
+
+    <header class="barra-app">
+      <div>
         <h1>Asignación de Beneficios</h1>
+        <p>Registre la entrega y asignación de beneficios a los beneficiarios.</p>
+      </div>
+    </header>
 
-        <!-- Sección del Formulario Superior -->
-        <form class="form-asignacion">
-            <div class="form-group">
-                <label for="programa">Nombre del Programa:</label>
-                <select id="programa" name="programa">
-                    <option value="">Seleccione</option>
-                </select>
-            </div>
+    <!-- Formulario superior -->
+    <section class="section">
+      <h3>Datos de la Asignación</h3>
 
-            <div class="form-group">
-                <label for="beneficiario">Nombre del Beneficiario o DUI:</label>
-                <input type="text" id="beneficiario" name="beneficiario">
-            </div>
+      <form class="form-asignacion">
+        <div class="form-grid">
 
-            <div class="form-group">
-                <label for="entidad">Entidad:</label>
-                <select id="entidad" name="entidad">
-                    <option value="">Seleccione una entidad...</option>
-                    <option value="ent1">Entidad 1</option>
-                    <option value="ent2">Entidad 2</option>
-                </select>
-            </div>
+          <div class="field">
+            <label for="programa">Nombre del Programa:</label>
+            <select id="programa" name="programa">
+              <option value="">Seleccione</option>
+            </select>
+          </div>
 
-            <div class="form-group">
-                <label for="descripcion">Descripción:</label>
-                <textarea id="descripcion" name="descripcion" rows="3" placeholder="(opcional)"></textarea>
-            </div>
+          <div class="field">
+            <label for="beneficiario">DUI del Beneficiario:</label>
+            <input type="text" id="beneficiario" name="beneficiario">
+          </div>
 
-            <div class="button-group">
-                <button type="submit" class="btn btn-asignar">Asignar</button>
-                <button type="reset" class="btn btn-cancelar">Cancelar</button>
-            </div>
-        </form>
+          <div class="field">
+            <label for="entidad">Entidad:</label>
+            <select id="entidad" name="entidad">
+              <option value="">Seleccione una entidad...</option>
+              <option value="ent1">Entidad 1</option>
+              <option value="ent2">Entidad 2</option>
+            </select>
+          </div>
 
-        <hr class="divider">
+          <div class="field full">
+            <label for="descripcion">Descripción:</label>
+            <textarea id="descripcion" name="descripcion" rows="3" placeholder="(opcional)"></textarea>
+          </div>
+        </div>
 
-        <!-- Sección Inferior: Detalles de la Asignación -->
-        <section class="detalles-section">
-            <h2>Detalles de la Asignación</h2>
+        <div class="actions">
+          <button type="submit" class="btn-primario">Asignar</button>
+          <button type="reset" class="btn">Cancelar</button>
+        </div>
+      </form>
+    </section>
 
-            <div class="form-group">
-                <label for="id-asignacion">Id. Asignación:</label>
-                <input type="text" id="id-asignacion" value=" " readonly>
-            </div>
+    <section class="section">
+      <h3>Detalles de la Asignación</h3>
 
-            <div class="form-group">
-                <label for="id-beneficiario">Id. Beneficiario o DUI:</label>
-                <input type="text" id="id-beneficiario" value=" " readonly>
-            </div>
+      <div class="form-grid">
 
-            <div class="form-group">
-                <label for="detalle-programa">Programa:</label>
-                <input type="text" id="detalle-programa" value=" " readonly>
-            </div>
+        <div class="field">
+          <label for="id-asignacion">Id. Asignación:</label>
+          <input type="text" id="id-asignacion" readonly>
+        </div>
 
-            <div class="form-group">
-                <label for="fecha-asignacion">Fecha de Asignación:</label>
-                <input type="text" id="fecha-asignacion" value=" " readonly>
-            </div>
-        </section>
-    </div>
+        <div class="field">
+          <label for="id-beneficiario">Id. Beneficiario o DUI:</label>
+          <input type="text" id="id-beneficiario" readonly>
+        </div>
+
+        <div class="field">
+          <label for="detalle-programa">Programa:</label>
+          <input type="text" id="detalle-programa" readonly>
+        </div>
+
+        <div class="field">
+          <label for="fecha-asignacion">Fecha de Asignación:</label>
+          <input type="text" id="fecha-asignacion" readonly>
+        </div>
+      </div>
+    </section>
+  </div>
 
 </body>
+
 </html>
