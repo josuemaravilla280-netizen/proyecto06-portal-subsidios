@@ -2,18 +2,7 @@
 
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
 
-/* ---------- Catálogos (GET /api/catalogos) ---------- */
-let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
-
-async function cargarCatalogos() {
-    const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-    catalogos = j.dato;
-}
-
 // [{id, nombre}] -> [[valor, texto]] para opciones()
-const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.nombre]);
 
 /* ---------- Envío (devuelve la respuesta completa, con `mensaje`) ---------- */
 async function enviarJSON(url, metodo, cuerpo) {
