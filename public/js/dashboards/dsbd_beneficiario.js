@@ -71,7 +71,7 @@ async function cargarPerfil() {
     $('pCorreo').textContent = formatear(p.correo);
     $('pEstadoCuenta').textContent = formatear(p.estado_cuenta);
     // Lo ya mostrado en otras partes de la página no se repite.
-    llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'direccion', 'imagen_documento', 'documentos']));
+    llenarLista($('pExtras'), aplanar(p.datos, ['municipio', 'municipio_id', 'direccion', 'imagen_documento', 'documentos']));
     document.title = `${p.nombre} - Portal de Subsidios`;
     const btn = $('btnInactivar');
     btn.classList.toggle('oculto', !esStaff());
@@ -143,6 +143,7 @@ async function cargarProgramas() {
             ['Fecha de solicitud', formatear(p.fecha_solicitud)],
             ['Estado de la inscripción', formatear(RETIROS[p.estado_inscripcion] ?? p.estado_inscripcion)],
             ...aplanar(p.datos, ['entrega.estado', 'entrega.cantidad']),
+            ...aplanar(p.requisitos), // lo que rellenó y los datos de su cuenta que se le pidieron
         ]);
         det.append(sum, ul);
         tdDet.appendChild(det);
@@ -248,7 +249,6 @@ async function abrirEdicion() {
         correo: perfil.correo,
         departamento_id: perfil.departamento_id,
         municipio_id: perfil.municipio_id,
-        municipio: perfil.municipio,
         direccion: perfil.direccion,
     };
 
