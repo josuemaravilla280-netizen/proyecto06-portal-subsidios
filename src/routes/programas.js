@@ -4,9 +4,9 @@ const router = express.Router();
 const admin = permitir('admin');
 const lectura = permitir('admin', 'operador', 'beneficiario');
 
-// getData.mjs es ESM: se carga con import() dinámico.
-const db = () => import('../data/getData.mjs'); 
-const set = () => import('../data/setData.mjs');
+// get/setData.mjs es ESM: se carga con import() dinámico.
+const getDB = () => import('../data/getData.mjs'); 
+const setDB = () => import('../data/setData.mjs');
 
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
@@ -51,7 +51,7 @@ function errorRequisitos(requisitos) {
         if (r.tipo === 'cuenta' && !CAMPOS_CUENTA.includes(r.campo)) return 'Un requisito toma un dato de la cuenta no válido.';
     }
     const nombres = requisitos.map((r) => r.nombre.toLowerCase());
-    if (new Set(nombres).size !== nombres.length) return 'Hay requisitos con el mismo nombre.';
+    if (new SetDB(nombres).size !== nombres.length) return 'Hay requisitos con el mismo nombre.';
     return null;
 }
 
@@ -75,7 +75,7 @@ function limpiar(body) {
         requisitos: limpiarRequisitos(body.requisitos),
         fechaInicio: t(body.fechaInicio),
         fechaCierre: t(body.fechaCierre),
-        zonas: Array.isArray(body.zonas) ? [...new Set(body.zonas.map(Number))] : [], // ids de departamentos_ec
+        zonas: Array.isArray(body.zonas) ? [...new SetDB(body.zonas.map(Number))] : [], // ids de departamentos_ec
     };
 }
 
@@ -119,13 +119,13 @@ const idValido = (req, res, next) => {
 
 // Lista (nombres para la página de listado)
 router.get('/', lectura, a(async (_req, res) => {
-    const { listarProgramas } = await db();
+    const { listarProgramas } = await getDB();
     res.json({ ok: true, datos: await listarProgramas() });
 }));
 
 // Información del programa
 router.get('/:id', lectura, idValido, a(async (req, res) => {
-    const { obtenerPrograma } = await db();
+    const { obtenerPrograma } = await getDB();
     const dato = await obtenerPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     res.json({ ok: true, dato });
@@ -133,7 +133,7 @@ router.get('/:id', lectura, idValido, a(async (req, res) => {
 
 // Datos de los gráficos de pastel
 router.get('/:id/estadisticas', lectura, idValido, a(async (req, res) => {
-    const { estadisticasPrograma } = await db();
+    const { estadisticasPrograma } = await getDB();
     const dato = await estadisticasPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     res.json({ ok: true, dato });
@@ -144,7 +144,7 @@ router.post('/', admin, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { crearPrograma } = await set();
+    const { crearPrograma } = await setDB();
     const r = await crearPrograma(d);
     if (r.claveDuplicada) return res.status(409).json({ ok: false, mensaje: 'La clave correlativa ya existe.' });
     res.status(201).json({ ok: true, dato: { id: r.id }, mensaje: 'Programa creado correctamente.' });
@@ -155,7 +155,7 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { actualizarPrograma } = await set();
+    const { actualizarPrograma } = await setDB();
     const r = await actualizarPrograma(req.programaId, d);
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.claveDuplicada) return res.status(409).json({ ok: false, mensaje: 'La clave correlativa ya existe.' });
@@ -167,14 +167,14 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
 }));
 
 router.delete('/:id', admin, idValido, a(async (req, res) => {
-    const { cancelarPrograma } = await set();
+    const { cancelarPrograma } = await setDB();
     const r = await cancelarPrograma(req.programaId);
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
     res.json({ ok: true, mensaje: 'Programa cancelado.' });
 }));
 router.patch('/:id/reactivar', admin, idValido, a(async (req, res) => {
-    const { reactivarPrograma } = await set();
+    const { reactivarPrograma } = await setDB();
     const r = await reactivarPrograma(req.programaId);
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está activo.' });
