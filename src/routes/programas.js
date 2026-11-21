@@ -5,7 +5,8 @@ const admin = permitir('admin');
 const lectura = permitir('admin', 'operador', 'beneficiario');
 
 // getData.mjs es ESM: se carga con import() dinámico.
-const db = () => import('../data/getData.mjs');
+const db = () => import('../data/getData.mjs'); 
+const set = () => import('../data/setData.mjs');
 
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
@@ -143,7 +144,7 @@ router.post('/', admin, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { crearPrograma } = await db();
+    const { crearPrograma } = await set();
     const r = await crearPrograma(d);
     if (r.claveDuplicada) return res.status(409).json({ ok: false, mensaje: 'La clave correlativa ya existe.' });
     res.status(201).json({ ok: true, dato: { id: r.id }, mensaje: 'Programa creado correctamente.' });
@@ -154,7 +155,7 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { actualizarPrograma } = await db();
+    const { actualizarPrograma } = await set();
     const r = await actualizarPrograma(req.programaId, d);
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.claveDuplicada) return res.status(409).json({ ok: false, mensaje: 'La clave correlativa ya existe.' });
@@ -166,18 +167,16 @@ router.put('/:id', admin, idValido, a(async (req, res) => {
 }));
 
 router.delete('/:id', admin, idValido, a(async (req, res) => {
-    const { cancelarPrograma } = await db();
+    const { cancelarPrograma } = await set();
     const r = await cancelarPrograma(req.programaId);
-    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está cancelado.' });
     res.json({ ok: true, mensaje: 'Programa cancelado.' });
 }));
 router.patch('/:id/reactivar', admin, idValido, a(async (req, res) => {
-    const { reactivarPrograma } = await db();
+    const { reactivarPrograma } = await set();
     const r = await reactivarPrograma(req.programaId);
-    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
-    if (r.noEncontrado) return noEncontrado(res);
+    if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'El programa ya está activo.' });
     res.json({ ok: true, mensaje: 'Programa reactivado.' });
 }));
