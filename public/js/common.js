@@ -28,4 +28,6 @@ async function cargarCatalogos() {
     if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
     catalogos = j.dato;
 }
+
+// [{id, nombre}] -> [[valor, texto]] para opciones()
 const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.nombre]);

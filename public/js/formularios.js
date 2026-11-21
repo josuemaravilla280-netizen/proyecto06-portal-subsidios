@@ -2,8 +2,6 @@
 
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
 
-// [{id, nombre}] -> [[valor, texto]] para opciones()
-
 /* ---------- Envío (devuelve la respuesta completa, con `mensaje`) ---------- */
 async function enviarJSON(url, metodo, cuerpo) {
     const r = await fetch(url, {
@@ -155,7 +153,7 @@ function formBeneficiario(d = {}) {
 /* ---------- Programa ----------
    d: { id, nombre, entidad, tipo_id, estado_id, estado, descripcion, cantidad, unidad, cupos, monto,
         claveCorrelativa, composicion, fechaInicio, fechaCierre, periodo, periodicidad_id,
-        zonas [ids], criterios [], documentos } */
+        zonas [ids], requisitos [] } */
 function formPrograma(d = {}) {
     const unidades = ['Paquete / kit', 'Unidad', 'Saco', 'Litro', 'Libras', 'Metros'];
     const zonas = (d.zonas || []).map(Number);
@@ -282,7 +280,7 @@ function formPrograma(d = {}) {
   `;
 }
 
-// Valores de un formulario de programa listos para enviar (zonas y criterios como arreglos).
+// Valores de un formulario de programa listos para enviar (zonas y requisitos como arreglos).
 function valoresPrograma(form) {
     const datos = valoresFormulario(form);
     datos.zonas = [...form.querySelectorAll('input[name="zonas"]:checked')].map((c) => c.value);
@@ -295,7 +293,7 @@ function valoresPrograma(form) {
 }
 
 /* Requisitos
-   Se guardan en programas_ed.datos.requisitos:
+   Se guardan en programas_ed.requisitos:
    [{ nombre, tipo, obligatorio, opciones?, campo? }]
    tipo: texto | numero | fecha | seleccion | booleano | archivo | cuenta
    ===================================================================== */
