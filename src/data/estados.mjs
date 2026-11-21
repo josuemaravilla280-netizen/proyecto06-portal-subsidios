@@ -1,15 +1,7 @@
-// IDs de los catálogos de estados (ver estados.json). Se ponen directamente en las consultas:
-// no hace falta buscarlos por nombre en la base de datos.
+// IDs de los catálogos de estados. Se ponen directamente en las consultas:
 export const ESTADOS = {
-    // estados_cuentas_empresas_ec
     cuenta: { activa: 1, inactivada: 2, eliminada: 3 },
-
-    // estados_incripciones_ec
     inscripcion: { enespera: 1, denegada: 2, aprovada: 3, retirarS: 4, retirarB: 5 },
-
-    // estados_programa_ec
-    // FALTA: la sección "estados_programa_ec" de estados.json trae los mismos estados que las inscripciones
-    // (parece un error al pegar). Completar con los ids reales de estos dos estados:
     programa: { activo: 1, cancelado_incompletado: 2, finalizado: 3, eliminado: 4 },
 };
 
