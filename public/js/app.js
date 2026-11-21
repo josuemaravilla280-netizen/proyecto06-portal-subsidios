@@ -12,17 +12,6 @@ let usuarioActual = null;
 let programaEditando = null;
 let beneficiarioEditando = null;
 
-// common.js
-function escapar(valor = '') {
-    return String(valor).replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    })[c]);
-}
-
 // Envía solicitudes al servidor y procesa las respuestas.
 async function api(url, opciones = {}) {
     const respuesta = await fetch(url, {
@@ -91,7 +80,6 @@ $('#btnSalir').addEventListener('click', async () => {
     }
 });
 
-
 function addEditarButton(text, id) {
     return `
                   <button
@@ -109,7 +97,6 @@ async function mostrarAplicacion() {
 
     $('#datosUsuario').textContent =
         `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
-
     construirMenu();
 
     try {
