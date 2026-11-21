@@ -10,7 +10,7 @@ export const ESTADOS = {
     // estados_programa_ec
     // FALTA: la sección "estados_programa_ec" de estados.json trae los mismos estados que las inscripciones
     // (parece un error al pegar). Completar con los ids reales de estos dos estados:
-    programa: { activo: null, cancelado_incompletado: null },
+    programa: { activo: 1, cancelado_incompletado: 2, finalizado: 3, eliminado: 4 },
 };
 
 // Id de un estado de programa. Falla con un mensaje claro mientras el id no esté completado arriba.
