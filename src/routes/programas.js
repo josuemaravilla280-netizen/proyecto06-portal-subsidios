@@ -51,7 +51,7 @@ function errorRequisitos(requisitos) {
         if (r.tipo === 'cuenta' && !CAMPOS_CUENTA.includes(r.campo)) return 'Un requisito toma un dato de la cuenta no válido.';
     }
     const nombres = requisitos.map((r) => r.nombre.toLowerCase());
-    if (new SetDB(nombres).size !== nombres.length) return 'Hay requisitos con el mismo nombre.';
+    if (new Set(nombres).size !== nombres.length) return 'Hay requisitos con el mismo nombre.';
     return null;
 }
 
@@ -75,7 +75,7 @@ function limpiar(body) {
         requisitos: limpiarRequisitos(body.requisitos),
         fechaInicio: t(body.fechaInicio),
         fechaCierre: t(body.fechaCierre),
-        zonas: Array.isArray(body.zonas) ? [...new SetDB(body.zonas.map(Number))] : [], // ids de departamentos_ec
+        zonas: Array.isArray(body.zonas) ? [...new Set(body.zonas.map(Number))] : [], // ids de departamentos_ec
     };
 }
 
