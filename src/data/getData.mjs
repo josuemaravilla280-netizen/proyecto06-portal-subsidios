@@ -157,8 +157,8 @@ export async function programasDeBeneficiario(id) {
            i.datos->'entrega'    AS entrega,
            to_char(i.fecha_solicitud, 'YYYY-MM-DD') AS fecha_solicitud,
            ei.name             AS estado_inscripcion,
-           i.datos             AS datos
-           i.requisitos        AS requisitos,
+           i.datos             AS datos,
+           i.requisitos        AS requisitos
     FROM inscripciones_ed i
     JOIN programas_ed pr        ON pr.id = i.programa_id
     JOIN estados_programa_ec ep ON ep.id = pr.estado
@@ -275,12 +275,12 @@ export async function estadisticasPrograma(id) {
 // Los estados de cuenta e inscripción salen del diccionario (data/estados.mjs); el resto, de la base de datos.
 export async function obtenerCatalogos() {
     const [departamentos, municipios, entidades, tipos, estados, periodicidades] = await Promise.all([
-        sql`SELECT id, name AS nombre FROM departamentos_ec ORDER BY name`,
-        sql`SELECT id, departamento AS departamento_id, name AS nombre FROM municipios_ec ORDER BY name`,
-        sql`SELECT id, nombre FROM empresas_ed ORDER BY nombre`,
-        sql`SELECT id, name AS nombre FROM tipos_beneficios_ec ORDER BY id`,
-        sql`SELECT id, name AS nombre FROM estados_programa_ec ORDER BY id`,
-        sql`SELECT id, name AS nombre FROM perioricidad_ec ORDER BY id`,
+        sql`SELECT id, name FROM departamentos_ec ORDER BY id`,
+        sql`SELECT id, departamento AS departamento_id, name FROM municipios_ec ORDER BY id`,
+        sql`SELECT id, nombre AS name FROM empresas_ed ORDER BY id`,
+        sql`SELECT id, name FROM tipos_beneficios_ec ORDER BY id`,
+        sql`SELECT id, name FROM estados_programa_ec ORDER BY id`,
+        sql`SELECT id, name FROM perioricidad_ec ORDER BY id`,
     ]);
     return {
         departamentos, municipios, entidades, tipos, estados, periodicidades,

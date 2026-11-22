@@ -51,7 +51,7 @@ function opcionesMunicipios(departamentoId, seleccionado = '') {
     return `
     <option value="">${departamentoId ? 'Seleccione...' : 'Seleccione un departamento'}</option>
     ${lista.map((m) => `
-      <option value="${m.id}" ${String(seleccionado) === String(m.id) ? 'selected' : ''}>${escapar(m.nombre)}</option>
+      <option value="${m.id}" ${String(seleccionado) === String(m.id) ? 'selected' : ''}>${escapar(m.name)}</option>
     `).join('')}
   `;
 }
@@ -121,7 +121,7 @@ function formBeneficiario(d = {}) {
           <select id="departamento" name="departamento" required>
             <option value="">Seleccione...</option>
             ${catalogos.departamentos.map((x) => `
-              <option value="${x.id}" ${String(d.departamento_id) === String(x.id) ? 'selected' : ''}>${escapar(x.nombre)}</option>
+              <option value="${x.id}" ${String(d.departamento_id) === String(x.id) ? 'selected' : ''}>${escapar(x.name)}</option>
             `).join('')}
           </select>
         </div>
@@ -247,7 +247,7 @@ function formPrograma(d = {}) {
               ${catalogos.departamentos.map((x) => `
                 <label class="check">
                   <input type="checkbox" name="zonas" value="${x.id}" ${zonas.includes(Number(x.id)) ? 'checked' : ''}>
-                  <span>${escapar(x.nombre)}</span>
+                  <span>${escapar(x.name)}</span>
                 </label>
               `).join('')}
             </div>
