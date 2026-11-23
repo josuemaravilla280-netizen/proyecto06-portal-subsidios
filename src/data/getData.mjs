@@ -80,6 +80,14 @@ export const programaRequisitos = (id) => getAtributo('programas_ed', 'requisito
 export const programaDatos = (id) => getAtributo('programas_ed', 'datos', 'id', id);
 
 /* ---------- inscripciones_ed (PK: usuario_id + programa_id) ----------*/
+export function listarInscripciones() {
+    return sql`
+    SELECT usuario_id, programa_id, to_char(fecha_solicitud, 'YYYY-MM-DD') AS fecha_solicitud, estado
+    FROM inscripciones_ed
+    ORDER BY fecha_solicitud`;
+    // capaz se tenga que combinar con la de abajo, la unica diferencia es que no limita por uno solo
+}
+
 // Todo menos los jsonb: { usuario_id, programa_id, fecha_solicitud, estado }
 export async function inscripcion(usuarioId, programaId) {
     const [fila] = await sql`
