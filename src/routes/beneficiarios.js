@@ -39,8 +39,8 @@ const a = (fn) => (req, res) =>
 
 // "01234567-8" => DUI; cualquier otro valor => pasaporte. Se guarda sin guion.
 function documentoDe(txt) {
-    const t = String(txt || '').trim().toUpperCase();
-    return { documento: t.replace(/-/g, ''), isDui: /^\d{8}-?\d$/.test(t) };
+    const t = String(txt || '').trim().toUpperCase().replace(/-/g, '');
+    return { documento: t, isDui: /^\d{9}$/.test(t) };
 }
 
 function limpiar(b) {
