@@ -80,7 +80,6 @@ $('#btnSalir').addEventListener('click', async () => {
     }
 });
 
-
 function addEditarButton(text, id) {
     return `
                   <button
@@ -98,7 +97,6 @@ async function mostrarAplicacion() {
 
     $('#datosUsuario').textContent =
         `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
-
     construirMenu();
 
     try {
@@ -269,7 +267,6 @@ async function cargarBeneficiarios() {
           <tr>
             <th>Nombre</th>
             <th>DUI/Pasaporte</th>
-            <th>Teléfono</th>
             <th>Ubicación</th>
             <th>Acciones</th>
           </tr>
@@ -283,10 +280,9 @@ async function cargarBeneficiarios() {
               </td>
 
               <td>${escapar(b.documento_unico)}</td>
-              <td>${escapar(b.telefono)}</td>
 
               <td>
-                ${escapar(b.municipio)}, ${escapar(b.departamento)}
+                ${getCatalogoName(catalogos.municipios,b.municipio_id)}
               </td>
 
               <td>
@@ -310,8 +306,6 @@ async function cargarBeneficiarios() {
         mostrarMensajeVista(err.message);
     }
 }
-
-// Aqui estaba la funcion `editarBeneficiario`
 
 // Muestra el formulario y la tabla de programas.
 async function vistaProgramas() {
@@ -385,45 +379,37 @@ async function cargarProgramas() {
         cont.innerHTML = `
       <h3>Programas registrados</h3>
 
-      <table>
+        <table>
         <thead>
-          <tr>
-            <th>Programa</th>
+            <tr>
             <th>Entidad</th>
+            <th>Programa</th>
             <th>Tipo</th>
-            <th>Fechas</th>
             <th>Estado</th>
             <th>Acciones</th>
-          </tr>
+            </tr>
         </thead>
 
         <tbody>
-          ${r.datos.map((p) => `
+            ${r.datos.map((p) => `
             <tr>
-              <td>
+                <td>${getCatalogoName(catalogos.entidades,p.entidad)}</td>
+                <td>
                 ${escapar(p.nombre)}
                 <br>
                 <small>${escapar(p.claveCorrelativa)}</small>
-              </td>
-
-              <td>${escapar(p.entidad)}</td>
-              <td>${escapar(p.tipo)}</td>
-
-              <td>
-                ${escapar(p.fechaInicio)} – ${escapar(p.fechaCierre)}
-              </td>
-
-              <td>${escapar(p.estado)}</td>
-
-              <td>
+                </td>
+                <td>${getCatalogoName(catalogos.tipos,p.tipo)}</td>
+                <td>${getCatalogoName(catalogos.estados,p.estado)}</td>
+                <td>
                 <div class="acciones-fila">
-                  ${addEditarButton("programa", p.id)}
+                    ${addEditarButton("programa", p.id)}
                 </div>
-              </td>
+                </td>
             </tr>
-          `).join('')}
+            `).join('')}
         </tbody>
-      </table>
+        </table>
     `;
         cont.querySelectorAll('[data-editar-programa]')
             .forEach((boton) => {
