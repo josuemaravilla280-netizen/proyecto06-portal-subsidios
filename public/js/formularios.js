@@ -2,19 +2,6 @@
 
 const valoresFormulario = (form) => Object.fromEntries(new FormData(form).entries());
 
-/* ---------- Catálogos (GET /api/catalogos) ---------- */
-let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
-
-async function cargarCatalogos() {
-    const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
-    catalogos = j.dato;
-}
-
-// [{id, nombre}] -> [[valor, texto]] para opciones()
-const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.nombre]);
-
 /* ---------- Envío (devuelve la respuesta completa, con `mensaje`) ---------- */
 async function enviarJSON(url, metodo, cuerpo) {
     const r = await fetch(url, {
@@ -64,7 +51,7 @@ function opcionesMunicipios(departamentoId, seleccionado = '') {
     return `
     <option value="">${departamentoId ? 'Seleccione...' : 'Seleccione un departamento'}</option>
     ${lista.map((m) => `
-      <option value="${m.id}" ${String(seleccionado) === String(m.id) ? 'selected' : ''}>${escapar(m.nombre)}</option>
+      <option value="${m.id}" ${String(seleccionado) === String(m.id) ? 'selected' : ''}>${escapar(m.name)}</option>
     `).join('')}
   `;
 }
@@ -134,7 +121,7 @@ function formBeneficiario(d = {}) {
           <select id="departamento" name="departamento" required>
             <option value="">Seleccione...</option>
             ${catalogos.departamentos.map((x) => `
-              <option value="${x.id}" ${String(d.departamento_id) === String(x.id) ? 'selected' : ''}>${escapar(x.nombre)}</option>
+              <option value="${x.id}" ${String(d.departamento_id) === String(x.id) ? 'selected' : ''}>${escapar(x.name)}</option>
             `).join('')}
           </select>
         </div>
@@ -166,7 +153,7 @@ function formBeneficiario(d = {}) {
 /* ---------- Programa ----------
    d: { id, nombre, entidad, tipo_id, estado_id, estado, descripcion, cantidad, unidad, cupos, monto,
         claveCorrelativa, composicion, fechaInicio, fechaCierre, periodo, periodicidad_id,
-        zonas [ids], criterios [], documentos } */
+        zonas [ids], requisitos [] } */
 function formPrograma(d = {}) {
     const unidades = ['Paquete / kit', 'Unidad', 'Saco', 'Litro', 'Libras', 'Metros'];
     const zonas = (d.zonas || []).map(Number);
@@ -260,7 +247,7 @@ function formPrograma(d = {}) {
               ${catalogos.departamentos.map((x) => `
                 <label class="check">
                   <input type="checkbox" name="zonas" value="${x.id}" ${zonas.includes(Number(x.id)) ? 'checked' : ''}>
-                  <span>${escapar(x.nombre)}</span>
+                  <span>${escapar(x.name)}</span>
                 </label>
               `).join('')}
             </div>
@@ -293,7 +280,7 @@ function formPrograma(d = {}) {
   `;
 }
 
-// Valores de un formulario de programa listos para enviar (zonas y criterios como arreglos).
+// Valores de un formulario de programa listos para enviar (zonas y requisitos como arreglos).
 function valoresPrograma(form) {
     const datos = valoresFormulario(form);
     datos.zonas = [...form.querySelectorAll('input[name="zonas"]:checked')].map((c) => c.value);
@@ -306,7 +293,7 @@ function valoresPrograma(form) {
 }
 
 /* Requisitos
-   Se guardan en programas_ed.datos.requisitos:
+   Se guardan en programas_ed.requisitos:
    [{ nombre, tipo, obligatorio, opciones?, campo? }]
    tipo: texto | numero | fecha | seleccion | booleano | archivo | cuenta
    ===================================================================== */

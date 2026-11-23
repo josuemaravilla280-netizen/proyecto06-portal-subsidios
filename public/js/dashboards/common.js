@@ -27,7 +27,7 @@ function formatear(v) {
     return String(v);
 }
 
-// Aplana un objeto jsonb; `omitir` lleva rutas como 'entrega.estado'.
+// Aplana un objeto jsonb, luego se le generara una vista como con el resto de datos; `omitir` lleva rutas como 'entrega.estado'.
 function aplanar(obj, omitir = [], ruta = '', etiquetaPadre = '') {
     const filas = [];
     Object.entries(obj ?? {}).forEach(([k, v]) => {

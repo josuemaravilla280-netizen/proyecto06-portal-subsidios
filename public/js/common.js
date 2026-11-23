@@ -20,3 +20,16 @@ function mensaje(elemento, texto, tipo = 'error') {
     elemento.className = `mensaje visible ${tipo}`;  //y le asigna un texto 
 }
 
+let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
+
+async function cargarCatalogos() {
+    const r = await fetch('/api/catalogos', { credentials: 'same-origin' });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.mensaje || `Error ${r.status}`);
+    catalogos = j.dato;
+}
+cargarCatalogos();
+
+// [{id, nombre}] -> [[valor, texto]] para opciones()
+const deCatalogo = (lista) => lista.map((x) => [String(x.id), x.name]);
+const getCatalogoName = (lista, id) => lista.find(o => o.id === id)?.name;;

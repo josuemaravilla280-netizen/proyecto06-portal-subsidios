@@ -1,7 +1,8 @@
 const express = require('express');
 const { permitir } = require('../middleware/auth');
-// getData.mjs es ESM: se carga con import() dinámico.
-const db = () => import('../data/getData.mjs');
+// get/setData.mjs es ESM: se carga con import() dinámico.
+const getDB = () => import('../data/getData.mjs');
+const setDB = () => import('../data/setData.mjs');
 const router = express.Router();
 const operador = permitir('admin', 'operador');
 const crypto = require('crypto');
@@ -10,6 +11,7 @@ const fs = require('fs/promises');
 
 const usuarioDe = (req) => req.usuario ?? req.user ?? req.session?.usuario ?? null;
 
+// solo el staff ve los beneficiarios, un beneficiario puede solo verse a si mismo
 const conAcceso = [
     permitir('admin', 'operador', 'beneficiario'),
     (req, res, next) => {
@@ -73,13 +75,13 @@ const noEncontrado = (res) => res.status(404).json({ ok: false, mensaje: 'Benefi
 
 // Lista (nombres para la página de listado)
 router.get('/', operador, a(async (_req, res) => {
-    const { listarBeneficiarios } = await db();
+    const { listarBeneficiarios } = await getDB();
     res.json({ ok: true, datos: await listarBeneficiarios() });
 }));
 
 // Perfil
 router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
-    const { obtenerBeneficiario } = await db();
+    const { obtenerBeneficiario } = await getDB();
     const dato = await obtenerBeneficiario(req.params.id);
     if (!dato) return noEncontrado(res);
     res.json({ ok: true, dato });
@@ -87,7 +89,7 @@ router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
 
 // Programas en que está registrado
 router.get('/:id/programas', ...conAcceso, idValido, a(async (req, res) => {
-    const { obtenerBeneficiario, programasDeBeneficiario } = await db();
+    const { obtenerBeneficiario, programasDeBeneficiario } = await getDB();
     if (!(await obtenerBeneficiario(req.params.id))) return noEncontrado(res);
     res.json({ ok: true, datos: await programasDeBeneficiario(req.params.id) });
 }));
@@ -97,10 +99,9 @@ router.post('/:id/programas', operador, idValido, a(async (req, res) => {
     const programaId = Number(req.body.programa_id);
     if (!Number.isInteger(programaId) || programaId < 1)
         return res.status(400).json({ ok: false, mensaje: 'Programa no válido.' });
-    const { crearInscripcion } = await db();
+    const { crearInscripcion } = await setDB();
     try {
-        const r = await crearInscripcion(req.params.id, programaId, {}, 'aprovada'); // registro directo del personal
-        if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+        const r = await crearInscripcion(req.params.id, programaId, { estado: 'aprovada' }); // registro directo del personal
         if (r.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
         if (r.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
         if (!r.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
@@ -117,9 +118,8 @@ router.delete('/:id/programas/:programaId', ...conAcceso, idValido, a(async (req
     const programaId = Number(req.params.programaId);
     if (!Number.isInteger(programaId)) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     const quien = usuarioDe(req)?.rol === 'beneficiario' ? 'retirarB' : 'retirarS';
-    const { retirarInscripcion } = await db();
+    const { retirarInscripcion } = await setDB();
     const r = await retirarInscripcion(req.params.id, programaId, quien);
-    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
     if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Inscripción no encontrada.' });
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La inscripción ya fue retirada.' });
     res.json({ ok: true, mensaje: 'Inscripción retirada.' });
@@ -127,15 +127,14 @@ router.delete('/:id/programas/:programaId', ...conAcceso, idValido, a(async (req
 
 // Inactivar cuenta: no borra al beneficiario, cambia el estado de su cuenta a 'inactivada'.
 router.delete('/:id', operador, idValido, a(async (req, res) => {
-    const { inactivarCuenta } = await db();
+    const { inactivarCuenta } = await setDB();
     const r = await inactivarCuenta(req.params.id);
-    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
     if (r.noEncontrado) return noEncontrado(res);
     if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está inactivada.' });
     res.json({ ok: true, mensaje: 'Cuenta inactivada.' });
 }));
 router.patch('/:id/reactivar', operador, idValido, a(async (req, res) => {
-    const { reactivarCuenta } = await db();
+    const { reactivarCuenta } = await setDB();
     const r = await reactivarCuenta(req.params.id);
     if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
     if (r.noEncontrado) return noEncontrado(res);
@@ -145,7 +144,7 @@ router.patch('/:id/reactivar', operador, idValido, a(async (req, res) => {
 
 // Documentos subidos
 router.get('/:id/documentos', ...conAcceso, idValido, a(async (req, res) => {
-    const { beneficiarioDocuments } = await db();
+    const { beneficiarioDocuments } = await getDB();
     const datos = await beneficiarioDocuments(req.params.id);
     if (!datos) return noEncontrado(res);
     res.json({ ok: true, datos: beneficiarioDocumentList(datos) });
@@ -156,7 +155,7 @@ router.post('/', operador, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d, true);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { crearBeneficiario } = await db();
+    const { crearBeneficiario } = await setDB();
     const r = await crearBeneficiario(d);
     if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
     if (r.municipioInvalido) return res.status(400).json({ ok: false, mensaje: 'El municipio no pertenece al departamento seleccionado.' });
@@ -169,7 +168,7 @@ router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
     const d = limpiar(req.body);
     const error = validar(d, false);
     if (error) return res.status(400).json({ ok: false, mensaje: error });
-    const { actualizarBeneficiario } = await db();
+    const { actualizarBeneficiario } = await setDB();
     const r = await actualizarBeneficiario(req.params.id, d);
     if (r.noEncontrado) return noEncontrado(res);
     if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
@@ -181,7 +180,7 @@ router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
 // En cuentas_beneficiarios_ed.datos.documentos: { "acta de nacimiento": "enlace/al/archivo" }.
 const TIPOS_ARCHIVO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'application/pdf': 'pdf' };
 const MIME_POR_EXTENSION = { png: 'image/png', jpg: 'image/jpeg', pdf: 'application/pdf' };
-const CARPETA_DOCS = path.join(process.cwd(), 'users_private_data', 'uploads', 'documentos');
+const CARPETA_DOCS = path.join(process.cwd(), 'uploads', 'documentos');
 const decodificar = (v) => { try { return decodeURIComponent(String(v ?? '')); } catch { return ''; } };
 const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -203,7 +202,8 @@ router.post('/:id/documentos', ...conAcceso, idValido,
         if (!TIPOS_ARCHIVO[mime] || !Buffer.isBuffer(req.body) || !req.body.length)
             return res.status(400).json({ ok: false, mensaje: 'Suba una imagen PNG o JPG, o un PDF (máximo 8 MB).' });
 
-        const { agregarDocumentoCuenta, normalizarTexto } = await db();
+        const { normalizarTexto } = await getDB();
+        const { agregarDocumentoCuenta } = await setDB();
         const nombreBase = normalizarTexto(tipo).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
         if (!tipo || tipo.length > 100 || !nombreBase) return res.status(400).json({ ok: false, mensaje: 'Falta el tipo de documento.' });
 
@@ -269,7 +269,8 @@ router.post('/:id/programas/:programaId/solicitud', ...conAcceso, idValido, a(as
     const programaId = Number(req.params.programaId);
     if (!Number.isInteger(programaId) || programaId < 1) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
 
-    const { obtenerPrograma, beneficiarioDocuments, crearInscripcion, normalizarTexto } = await db();
+    const { obtenerPrograma, beneficiarioDocuments, normalizarTexto } = await getDB();
+    const { crearInscripcion } = await setDB();
     const programa = await obtenerPrograma(programaId);
     if (!programa) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     const documentos = await beneficiarioDocuments(req.params.id);
@@ -288,8 +289,11 @@ router.post('/:id/programas/:programaId/solicitud', ...conAcceso, idValido, a(as
     }
 
     try {
-        const resultado = await crearInscripcion(req.params.id, programaId, { respuestas: guardadas });
-        if (resultado.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${resultado.estadoFaltante}" en el catálogo.` });
+        const resultado = await crearInscripcion(req.params.id, programaId, {
+            requisitos: { respuestas: guardadas, datos_cuenta: datosCuenta },
+        });
+        // Columna inscripciones_ed.requisitos: lo que rellenó y la lista de datos de su cuenta que se le pidieron.
+        const datosCuenta = (programa.requisitos || []).filter((r) => r.tipo === 'cuenta').map((r) => r.campo);
         if (resultado.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
         if (resultado.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
         if (!resultado.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });

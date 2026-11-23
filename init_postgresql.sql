@@ -105,6 +105,7 @@ CREATE TABLE inscripciones_ed (
     usuario_id      UUID NOT NULL REFERENCES cuentas_beneficiarios_ed(id),
     programa_id     INTEGER NOT NULL REFERENCES programas_ed(id),
     datos           JSONB,
+    requisitos      JSONB,
     fecha_solicitud DATE,
     estado          INTEGER NOT NULL REFERENCES estados_incripciones_ec(id),
     PRIMARY KEY (usuario_id, programa_id)
