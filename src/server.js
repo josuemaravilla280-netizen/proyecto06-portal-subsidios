@@ -8,6 +8,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth').default;
 const beneficiariosRoutes = require('./routes/beneficiarios');
 const programasRoutes = require('./routes/programas');
+const inscripcionesRoutes = require('./routes/inscripciones');
 
 const app = express();
 app.disable('x-powered-by');
@@ -24,6 +25,7 @@ app.use('/api/catalogos', require('./routes/catalogos'));
 app.use('/api/auth', authRoutes);
 app.use('/api/beneficiarios', beneficiariosRoutes);
 app.use('/api/programas', programasRoutes);
+app.use('/api/inscripciones', inscripcionesRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true, mensaje: 'API disponible. Sprint 1 sin base de datos.' }));
 app.use('/api/*', (_req, res) => res.status(404).json({ ok: false, mensaje: 'Recurso no encontrado.' }));
 app.use((error, _req, res, _next) => { console.error(error); res.status(500).json({ ok: false, mensaje: 'Error interno del servidor.' }); });
