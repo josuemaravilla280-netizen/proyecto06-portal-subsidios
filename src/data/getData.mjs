@@ -209,7 +209,7 @@ export function listarProgramas() {
            tipo_beneficio      AS tipo,
            estado
     FROM programas_ed
-    ORDER BY nombre`;
+    ORDER BY id DESC`;
 }
 
   // Incluye los campos de la página (tipo, entrega, descripcion, cupos_maximos)
