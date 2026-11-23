@@ -1,12 +1,11 @@
 const express = require('express');
 const { permitir } = require('../middleware/auth');
-const router = express.Router();
-const admin = permitir('admin');
-const lectura = permitir('admin', 'operador', 'beneficiario');
-
 // get/setData.mjs es ESM: se carga con import() dinámico.
 const getDB = () => import('../data/getData.mjs'); 
 const setDB = () => import('../data/setData.mjs');
+const router = express.Router();
+const admin = permitir('admin');
+const lectura = permitir('admin', 'operador', 'beneficiario');
 
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
