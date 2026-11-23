@@ -47,32 +47,30 @@ router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
 }));
 
 // Registrar en otro programa (solo personal)
-router.post('/:id', operador, idValido, a(async (req, res) => {
-    const programaId = Number(req.body.programa_id);
-    const beneficiarioId = req.params.id;
-    if (!Number.isInteger(programaId) || programaId < 1)
-        return res.status(400).json({ ok: false, mensaje: 'Programa no válido.' });
-    const { crearInscripcion } = await setDB();
-    try {
-        const r = await crearInscripcion(beneficiarioId, programaId, { estado: 'aprovada' });
-        if (r.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-        if (r.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
-        if (!r.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
-        res.status(201).json({ ok: true, mensaje: 'Beneficiario registrado en el programa.' });
-    } catch (e) {
-        if (e.code === '23503') return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
-        throw e;
-    }
-}));
-
-// Solicitud de inscripción
-router.post('/:id/:programaId/solicitud', ...conAcceso, idValido, a(async (req, res) => {
+router.post('/:id/:programaId', ...conAcceso, idValido, a(async (req, res) => {
     const programaId = Number(req.params.programaId);
     const beneficiarioId = req.params.id;
-    if (!Number.isInteger(programaId) || programaId < 1) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+    if (!Number.isInteger(programaId) || programaId < 1)
+        return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
 
+    const esPersonal = ['admin', 'operador'].includes(usuarioDe(req)?.rol);
     const { obtenerPrograma, beneficiarioDocuments, normalizarTexto } = await getDB();
     const { crearInscripcion } = await setDB();
+
+    // Personal: registro directo (aprovada). Beneficiario: solicitud (enespera) con requisitos.
+    if (esPersonal) {
+        try {
+            const r = await crearInscripcion(beneficiarioId, programaId, { estado: 'aprovada' });
+            if (r.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+            if (r.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
+            if (!r.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
+            return res.status(201).json({ ok: true, mensaje: 'Beneficiario registrado en el programa.' });
+        } catch (e) {
+            if (e.code === '23503') return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
+            throw e;
+        }
+    }
+
     const programa = await obtenerPrograma(programaId);
     if (!programa) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
     const documentos = await beneficiarioDocuments(beneficiarioId);
@@ -97,7 +95,7 @@ router.post('/:id/:programaId/solicitud', ...conAcceso, idValido, a(async (req, 
         if (resultado.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
         if (resultado.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
         if (!resultado.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
-        res.status(201).json({ ok: true, mensaje: 'Solicitud de inscripción enviada.' });
+        return res.status(201).json({ ok: true, mensaje: 'Solicitud de inscripción enviada.' });
     } catch (e) {
         if (e.code === '23503') return noEncontrado(res);
         throw e;
