@@ -2,6 +2,3 @@
 node_modules/
 npm-debug.log*
 .DS_Store
-.vscode
-proyecto6.session.sql
-users_private_data/uploads/
