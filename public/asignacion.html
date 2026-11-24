@@ -11,83 +11,58 @@
 <body>
 
   <div class="panel-app">
-
+    
     <header class="barra-app">
       <div>
         <h1>Asignación de Beneficios</h1>
-        <p>Registre la entrega y asignación de beneficios a los beneficiarios.</p>
       </div>
     </header>
 
     <!-- Formulario superior -->
     <section class="section">
-      <h3>Datos de la Asignación</h3>
-
-      <form class="form-asignacion">
-        <div class="form-grid">
-
-          <div class="field">
-            <label for="programa">Nombre del Programa:</label>
-            <select id="programa" name="programa">
-              <option value="">Seleccione</option>
-            </select>
-          </div>
-
-          <div class="field">
-            <label for="beneficiario">DUI del Beneficiario:</label>
-            <input type="text" id="beneficiario" name="beneficiario">
-          </div>
-
-          <div class="field">
-            <label for="entidad">Entidad:</label>
-            <select id="entidad" name="entidad">
-              <option value="">Seleccione una entidad...</option>
-              <option value="ent1">Entidad 1</option>
-              <option value="ent2">Entidad 2</option>
-            </select>
-          </div>
-
-          <div class="field full">
-            <label for="descripcion">Descripción:</label>
-            <textarea id="descripcion" name="descripcion" rows="3" placeholder="(opcional)"></textarea>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button type="submit" class="btn-primario">Asignar</button>
-          <button type="reset" class="btn">Cancelar</button>
-        </div>
+      <form id="formBuscar" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <label>Entidad responsable <select id="fEntidad"></select></label>
+        <label>Programa <select id="fPrograma"></select></label>
+        <label>Beneficiario (documento) <input id="fBeneficiario" type="text"></label>
+        <button type="submit" hidden></button>
       </form>
     </section>
 
-    <section class="section">
-      <h3>Detalles de la Asignación</h3>
+    <header class="barra-app" style="margin-top:18px">
+      <div><span class="tag-portal">PORTAL MULTIEMPRESA</span><p>Detalle de asignación</p></div>
+      <div style="display:flex;gap:9px"><button id="btnCerrar" class="btn-secundario">Cerrar ventana</button></div>
+    </header>
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
 
-      <div class="form-grid">
-
-        <div class="field">
-          <label for="id-asignacion">Id. Asignación:</label>
-          <input type="text" id="id-asignacion" readonly>
+    <section class="vista-panel" style="margin-top:18px">
+      <h2 id="titulo">Asignación</h2>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="flex:1;min-width:280px">
+          <h3>Requisitos del programa</h3>
+          <ul id="listaPrograma" class="datos-lista"></ul>
+        </div>
+        
+        <div style="flex:1;min-width:280px">
+          <h3>Requisitos de la inscripción</h3>
+          <ul id="listaInscripcion" class="datos-lista"></ul>
         </div>
 
-        <div class="field">
-          <label for="id-beneficiario">Id. Beneficiario o DUI:</label>
-          <input type="text" id="id-beneficiario" readonly>
-        </div>
+      </div>
 
-        <div class="field">
-          <label for="detalle-programa">Programa:</label>
-          <input type="text" id="detalle-programa" readonly>
-        </div>
-
-        <div class="field">
-          <label for="fecha-asignacion">Fecha de Asignación:</label>
-          <input type="text" id="fecha-asignacion" readonly>
-        </div>
+      <div class="section">
+        <textarea id="motivo" class="oculto" rows="3" style="width:100%"
+          placeholder="Motivo de la cancelación. Para enviar sin motivo, presione «Cancelar» de nuevo."></textarea>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:12px">
+        <button id="btnAprobar" class="btn" disabled>Aprobar</button>
+        <button id="btnCancelar" class="btn-secundario" disabled>Cancelar</button>
       </div>
     </section>
   </div>
 
+  <footer><span>Subsidios · ayudas</span><div class="links-footer"><a href="#">Privacidad y tratamiento de datos</a><a href="#">Condiciones de uso</a></div></footer>
+  <script src="js/common.js" defer></script>
+  <script src="js/asignacion.js" defer></script>
 </body>
 
 </html>
