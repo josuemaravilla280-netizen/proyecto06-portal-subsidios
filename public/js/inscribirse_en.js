@@ -1,6 +1,5 @@
 // Uso: inscribirse_en.html?id=<id del programa>
 // Pide el programa, la cuenta del beneficiario y sus documentos, y arma el formulario de inscripción.
-// Requiere common.js (escapar, mensaje) y formularios.js (opciones, CAMPOS_CUENTA, enviarJSON).
 const ID = new URLSearchParams(location.search).get('id');
 const $ = (id) => document.getElementById(id);
 
@@ -234,7 +233,7 @@ async function enviarSolicitud(e) {
     try {
         const cuerpo = valoresInscripcion(e.currentTarget);
         const r = await enviarJSON(
-            `/api/beneficiarios/${encodeURIComponent(usuario.id)}/programas/${encodeURIComponent(ID)}/solicitud`,
+            `/api/inscripciones/${encodeURIComponent(usuario.id)}/${encodeURIComponent(ID)}`,
             'POST',
             cuerpo
         );

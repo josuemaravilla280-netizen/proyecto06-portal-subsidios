@@ -80,6 +80,28 @@ export const programaRequisitos = (id) => getAtributo('programas_ed', 'requisito
 export const programaDatos = (id) => getAtributo('programas_ed', 'datos', 'id', id);
 
 /* ---------- inscripciones_ed (PK: usuario_id + programa_id) ----------*/
+export function listarInscripciones() {
+    return sql`
+        SELECT i.usuario_id                           AS beneficiario_id,
+               c.persona_documento                    AS documento_unico,
+               concat_ws(' ', pe.nombre, pe.apellido) AS beneficiario_nombre,
+               i.programa_id,
+               p.nombre                               AS programa_nombre,
+               p.entidad_responsable                  AS entidad,
+               e.nombre                               AS entidad_nombre,
+               i.estado,
+               i.fecha_solicitud,
+               i.requisitos                           AS inscripcion_requisitos,
+               p.requisitos                           AS programa_requisitos
+        FROM inscripciones_ed i
+        JOIN cuentas_beneficiarios_ed c ON c.id = i.usuario_id
+        JOIN personas_ed pe             ON pe.documento_unico = c.persona_documento
+        JOIN programas_ed p             ON p.id = i.programa_id
+        JOIN empresas_ed e              ON e.id = p.entidad_responsable
+        ORDER BY fecha_solicitud
+    `;
+}
+
 // Todo menos los jsonb: { usuario_id, programa_id, fecha_solicitud, estado }
 export async function inscripcion(usuarioId, programaId) {
     const [fila] = await sql`
@@ -209,7 +231,7 @@ export function listarProgramas() {
            tipo_beneficio      AS tipo,
            estado
     FROM programas_ed
-    ORDER BY nombre`;
+    ORDER BY id DESC`;
 }
 
   // Incluye los campos de la página (tipo, entrega, descripcion, cupos_maximos)
@@ -285,6 +307,6 @@ export async function obtenerCatalogos() {
     return {
         departamentos, municipios, entidades, tipos, estados, periodicidades,
         estados_cuenta: listaEstados('cuenta'),
-        estados_inscripcion: listaEstados('inscripcion'),
+        estados_inscripciones: listaEstados('inscripcion'),
     };
 }

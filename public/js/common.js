@@ -20,7 +20,7 @@ function mensaje(elemento, texto, tipo = 'error') {
     elemento.className = `mensaje visible ${tipo}`;  //y le asigna un texto 
 }
 
-let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [] };
+let catalogos = { departamentos: [], municipios: [], entidades: [], tipos: [], estados: [], periodicidades: [], estados_inscripciones: [] };
 
 async function cargarCatalogos() {
     const r = await fetch('/api/catalogos', { credentials: 'same-origin' });

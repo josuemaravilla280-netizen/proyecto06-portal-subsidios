@@ -49,26 +49,6 @@ export function reactivarPrograma(id) {
     });
 }
 
-// quien: 'retirarB' (la retira el beneficiario) o 'retirarS' (la retira el personal)
-export function retirarInscripcion(id, programaId, quien) {
-    const retiros = { retirarB: ESTADOS.inscripcion.retirarB, retirarS: ESTADOS.inscripcion.retirarS };
-    if (!(quien in retiros)) throw new Error(`"${quien}" no es un estado de retiro`);
-    const nuevo = retiros[quien];
-    const otro = quien === 'retirarB' ? retiros.retirarS : retiros.retirarB;
-
-    return sql.begin(async (tx) => {
-        const [i] = await tx`
-      SELECT estado FROM inscripciones_ed
-      WHERE usuario_id = ${id} AND programa_id = ${programaId} FOR UPDATE`;
-        if (!i) return { noEncontrado: true };
-        if (i.estado === nuevo || i.estado === otro) return { yaEstaba: true }; // ya retirada: no se reescribe quién la retiró
-        await tx`
-      UPDATE inscripciones_ed SET estado = ${nuevo}
-      WHERE usuario_id = ${id} AND programa_id = ${programaId}`;
-        return { ok: true };
-    });
-}
-
 /* ---------- Inscripciones ---------- */
 // estado: 'enespera' (solicita el beneficiario) o 'aprovada' (registra el personal).
 // requisitos: { respuestas, datos_cuenta } -> columna inscripciones_ed.requisitos
@@ -101,6 +81,45 @@ export function crearInscripcion(id, programaId, { requisitos = null, estado = '
         WHERE inscripciones_ed.estado IN (${ESTADOS.inscripcion.retirarS}, ${ESTADOS.inscripcion.retirarB})
       RETURNING programa_id`;
         return { creada: filas.length > 0 };
+    });
+}
+
+export function resolverInscripcion(id, programaId, estadoId, motivo = null) {
+    const pendiente = ESTADOS.inscripcion.enespera;
+ 
+    return sql.begin(async (tx) => {
+        const [i] = await tx`
+      SELECT estado FROM inscripciones_ed
+      WHERE usuario_id = ${id} AND programa_id = ${programaId} FOR UPDATE`;
+        if (!i) return { noEncontrado: true };
+        if (i.estado !== pendiente) return { yaResuelta: true };
+        await tx`
+      UPDATE inscripciones_ed
+      SET estado = ${estadoId},
+          datos = COALESCE(datos, '{}'::jsonb)
+                  || ${tx.json({ decision: { estado: estadoId, motivo, fecha: new Date().toISOString() } })}::jsonb
+      WHERE usuario_id = ${id} AND programa_id = ${programaId}`;
+        return { ok: true };
+    });
+}
+
+// quien: 'retirarB' (la retira el beneficiario) o 'retirarS' (la retira el personal)
+export function retirarInscripcion(id, programaId, quien) {
+    const retiros = { retirarB: ESTADOS.inscripcion.retirarB, retirarS: ESTADOS.inscripcion.retirarS };
+    if (!(quien in retiros)) throw new Error(`"${quien}" no es un estado de retiro`);
+    const nuevo = retiros[quien];
+    const otro = quien === 'retirarB' ? retiros.retirarS : retiros.retirarB;
+
+    return sql.begin(async (tx) => {
+        const [i] = await tx`
+      SELECT estado FROM inscripciones_ed
+      WHERE usuario_id = ${id} AND programa_id = ${programaId} FOR UPDATE`;
+        if (!i) return { noEncontrado: true };
+        if (i.estado === nuevo || i.estado === otro) return { yaEstaba: true }; // ya retirada: no se reescribe quién la retiró
+        await tx`
+      UPDATE inscripciones_ed SET estado = ${nuevo}
+      WHERE usuario_id = ${id} AND programa_id = ${programaId}`;
+        return { ok: true };
     });
 }
 

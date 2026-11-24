@@ -23,8 +23,7 @@ const conAcceso = [
 ];
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const idValido = (req, res, next) =>
-    UUID.test(req.params.id) ? next() : res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
+const idValido = (req, res, next) => UUID.test(req.params.id) ? next() : res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
 
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
@@ -92,37 +91,6 @@ router.get('/:id/programas', ...conAcceso, idValido, a(async (req, res) => {
     const { obtenerBeneficiario, programasDeBeneficiario } = await getDB();
     if (!(await obtenerBeneficiario(req.params.id))) return noEncontrado(res);
     res.json({ ok: true, datos: await programasDeBeneficiario(req.params.id) });
-}));
-
-// Registrar en otro programa (solo personal; la solicitud del beneficiario aún no está implementada)
-router.post('/:id/programas', operador, idValido, a(async (req, res) => {
-    const programaId = Number(req.body.programa_id);
-    if (!Number.isInteger(programaId) || programaId < 1)
-        return res.status(400).json({ ok: false, mensaje: 'Programa no válido.' });
-    const { crearInscripcion } = await setDB();
-    try {
-        const r = await crearInscripcion(req.params.id, programaId, { estado: 'aprovada' }); // registro directo del personal
-        if (r.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-        if (r.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
-        if (!r.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
-        res.status(201).json({ ok: true, mensaje: 'Beneficiario registrado en el programa.' });
-    } catch (e) {
-        if (e.code === '23503') return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
-        throw e;
-    }
-}));
-
-// Retirar de un programa: no borra la inscripción, cambia su estado.
-// 'retirarB' si lo hace el propio beneficiario, 'retirarS' si lo hace el personal.
-router.delete('/:id/programas/:programaId', ...conAcceso, idValido, a(async (req, res) => {
-    const programaId = Number(req.params.programaId);
-    if (!Number.isInteger(programaId)) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-    const quien = usuarioDe(req)?.rol === 'beneficiario' ? 'retirarB' : 'retirarS';
-    const { retirarInscripcion } = await setDB();
-    const r = await retirarInscripcion(req.params.id, programaId, quien);
-    if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Inscripción no encontrada.' });
-    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La inscripción ya fue retirada.' });
-    res.json({ ok: true, mensaje: 'Inscripción retirada.' });
 }));
 
 // Inactivar cuenta: no borra al beneficiario, cambia el estado de su cuenta a 'inactivada'.
@@ -243,65 +211,5 @@ router.get('/:id/documentos/:archivo', ...conAcceso, idValido, (req, res) => {
         (err) => { if (err && !res.headersSent) res.status(404).json({ ok: false, mensaje: 'Documento no encontrado.' }); }
     );
 });
-
-/* ---------- Solicitud de inscripción ---------- */
-// Devuelve el primer error de las respuestas respecto a los requisitos del programa, o null.
-function errorSolicitud(requisitos, respuestas, tiposSubidos, normalizar) {
-    for (const r of requisitos) {
-        if (r.tipo === 'cuenta') continue; // se toma de la cuenta
-        if (r.tipo === 'archivo') {
-            const subido = tiposSubidos.some((t) => normalizar(t) === normalizar(r.nombre));
-            if (r.obligatorio && !subido) return `Falta subir el documento: ${r.nombre}.`;
-            continue;
-        }
-        const v = String(respuestas[r.nombre] ?? '').trim();
-        if (!v) { if (r.obligatorio) return `Falta completar: ${r.nombre}.`; continue; }
-        if (v.length > 500) return `La respuesta de "${r.nombre}" es demasiado larga.`;
-        if (r.tipo === 'numero' && !Number.isFinite(Number(v))) return `"${r.nombre}" debe ser un número.`;
-        if (r.tipo === 'fecha' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return `"${r.nombre}" debe ser una fecha válida.`;
-        if (r.tipo === 'booleano' && !['Sí', 'No'].includes(v)) return `"${r.nombre}" debe ser Sí o No.`;
-        if (r.tipo === 'seleccion' && !(r.opciones || []).includes(v)) return `"${r.nombre}" tiene una opción no válida.`;
-    }
-    return null;
-}
-
-router.post('/:id/programas/:programaId/solicitud', ...conAcceso, idValido, a(async (req, res) => {
-    const programaId = Number(req.params.programaId);
-    if (!Number.isInteger(programaId) || programaId < 1) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-
-    const { obtenerPrograma, beneficiarioDocuments, normalizarTexto } = await getDB();
-    const { crearInscripcion } = await setDB();
-    const programa = await obtenerPrograma(programaId);
-    if (!programa) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-    const documentos = await beneficiarioDocuments(req.params.id);
-    if (!documentos) return noEncontrado(res);
-
-    const respuestas = req.body?.respuestas && typeof req.body.respuestas === 'object' ? req.body.respuestas : {};
-    const error = errorSolicitud(programa.requisitos || [], respuestas, Object.keys(documentos), normalizarTexto);
-    if (error) return res.status(400).json({ ok: false, mensaje: error });
-
-    // Solo se guardan las respuestas a requisitos del programa.
-    const guardadas = {};
-    for (const r of programa.requisitos || []) {
-        if (['cuenta', 'archivo'].includes(r.tipo)) continue;
-        const v = String(respuestas[r.nombre] ?? '').trim();
-        if (v) guardadas[r.nombre] = v;
-    }
-
-    try {
-        const resultado = await crearInscripcion(req.params.id, programaId, {
-            requisitos: { respuestas: guardadas, datos_cuenta: datosCuenta },
-        });
-        // Columna inscripciones_ed.requisitos: lo que rellenó y la lista de datos de su cuenta que se le pidieron.
-        const datosCuenta = (programa.requisitos || []).filter((r) => r.tipo === 'cuenta').map((r) => r.campo);
-        if (resultado.programaNoExiste) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
-        if (resultado.programaCancelado) return res.status(409).json({ ok: false, mensaje: 'El programa está cancelado.' });
-        if (!resultado.creada) return res.status(409).json({ ok: false, mensaje: 'Ya está registrado en ese programa.' });
-        res.status(201).json({ ok: true, mensaje: 'Solicitud de inscripción enviada.' });
-    } catch (e) {
-        if (e.code === '23503') return noEncontrado(res);
-        throw e;
-    }
-}));
 
 module.exports = router;

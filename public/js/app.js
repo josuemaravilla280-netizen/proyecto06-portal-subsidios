@@ -34,6 +34,19 @@ async function api(url, opciones = {}) {
 
     return datos;
 }
+
+// Comprueba si existe una sesión activa al cargar la página.
+(async function comprobarSesion() {
+    try {
+        const r = await api('/api/auth/me');
+
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (_) {
+        // El usuario aún no ha iniciado sesión.
+    }
+})();
+
 // INICIO Y CIERRE DE SESIÓN
 
 // Permite mostrar u ocultar la contraseña.
@@ -120,7 +133,12 @@ function construirMenu() {
             'Beneficiarios',
             ['admin', 'operador'].includes(usuarioActual.rol)
         ],
-        ['programas', 'Programas', true]
+        ['programas', 'Programas', true],
+        [
+            'asignaciones',
+            'Asignaciones',
+            ['admin', 'operador'].includes(usuarioActual.rol)
+        ]
     ];
 
     // Crea solamente las opciones permitidas para el usuario.
@@ -140,10 +158,20 @@ function construirMenu() {
                 if (id === 'inicio') inicio();
                 if (id === 'beneficiarios') vistaBeneficiarios();
                 if (id === 'programas') vistaProgramas();
+                if (id === 'asignaciones') vistaAsignaciones();
             });
 
             menu.appendChild(boton);
         });
+
+    //     if (id === 'inicio') inicio();
+    //     if (id === 'beneficiarios') vistaBeneficiarios();
+    //     if (id === 'programas') vistaProgramas();
+
+    //   });
+
+    //   menu.appendChild(boton);
+    // });
 }
 
 // Muestra la pantalla principal.
@@ -416,28 +444,107 @@ async function cargarProgramas() {
     }
 }
 
-// Aqui estaba la funcion `editarPrograma`
+// Muestra el buscador con filtros y la lista de asignaciones (solicitudes de inscripción).
+async function vistaAsignaciones() {
+    const filtro = (id, etiqueta, control, activo) => `
+      <div class="filtro">
+        <label for="${id}">${etiqueta}</label>
+        ${control}
+        <label><input type="checkbox" id="chk_${id}" ${activo ? 'checked' : ''}> Considerar</label>
+      </div>`;
+    const select = (id, lista, valor = '') =>
+        `<select id="${id}">` +
+        lista.map((x) => `<option value="${escapar(x.id)}" ${String(x.id) === String(valor) ? 'selected' : ''}>${escapar(x.name)}</option>`).join('') +
+        `</select>`;
 
-// Comprueba si existe una sesión activa al cargar la página.
-(async function comprobarSesion() {
+    let programas = [];
     try {
-        const r = await api('/api/auth/me');
-
-        usuarioActual = r.usuario;
-        mostrarAplicacion();
-    } catch (_) {
-        // El usuario aún no ha iniciado sesión.
+        programas = (await api('/api/programas')).datos;
+    } catch (err) {
+        mostrarMensajeVista(err.message);
     }
-})();
 
+    vista.innerHTML = `
+    <h2>Asignaciones</h2>
+    <form id="formAsignaciones" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      ${filtro('fEntidad', 'Entidad responsable', select('fEntidad', catalogos.entidades), false)}
+      ${filtro('fPrograma', 'Programa', select('fPrograma', programas.map((p) => ({ id: p.id, name: p.nombre }))), false)}
+      ${filtro('fBeneficiario', 'Beneficiario (documento)', `<input id="fBeneficiario" type="text">`, false)}
+      ${filtro('fEstado', 'Estado', select('fEstado', catalogos.estados_inscripciones, 1), true)}
+      <button class="btn" type="submit">Buscar</button>
+    </form>
+    <div class="tabla-contenedor" id="tablaAsignaciones"></div>`;
 
-// Muestra un aviso para las páginas que aún no están implementadas.
-document.querySelectorAll('[data-static]').forEach((enlace) => {
-    enlace.addEventListener('click', (e) => {
-        e.preventDefault();
-
-        alert(
-            'Página informativa pendiente de elaboración; '
-        );
+    // Cada control se activa o inactiva según su checkbox.
+    ['fEntidad', 'fPrograma', 'fBeneficiario', 'fEstado'].forEach((id) => {
+        const chk = $(`#chk_${id}`);
+        const ctl = $(`#${id}`);
+        ctl.disabled = !chk.checked;
+        chk.addEventListener('change', () => { ctl.disabled = !chk.checked; });
     });
-});
+
+    $('#formAsignaciones').addEventListener('submit', (e) => {
+        e.preventDefault();
+        cargarAsignaciones();
+    });
+
+    await cargarAsignaciones();
+}
+
+// Consulta las inscripciones y aplica los filtros activos.
+async function cargarAsignaciones() {
+    const cont = $('#tablaAsignaciones');
+    const activo = (id) => ($(`#chk_${id}`).checked ? $(`#${id}`).value.trim() : null);
+    const fEnt = activo('fEntidad');
+    const fProg = activo('fPrograma');
+    const fDoc = activo('fBeneficiario');
+    const fEst = activo('fEstado');
+
+    try {
+        const r = await api('/api/inscripciones');
+        const datos = r.datos.filter((i) =>
+            (!fEnt || String(i.entidad) === fEnt) &&
+            (!fProg || String(i.programa_id) === fProg) &&
+            (!fDoc || String(i.documento_unico).toLowerCase().includes(fDoc.toLowerCase())) &&
+            (!fEst || String(i.estado) === fEst));
+
+        if (!datos.length) {
+            cont.innerHTML = `<p class="estado-vacio">No hay asignaciones que coincidan.</p>`;
+            return;
+        }
+
+        cont.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Entidad responsable</th>
+            <th>Programa</th>
+            <th>Beneficiario</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${datos.map((i) => `
+            <tr>
+              <td>${escapar(getCatalogoName(catalogos.entidades, i.entidad) ?? '')}</td>
+              <td>${escapar(i.programa_nombre)}</td>
+              <td>${escapar(i.documento_unico)}</td>
+              <td>${escapar(getCatalogoName(catalogos.estados_inscripciones, i.estado) ?? i.estado)}</td>
+              <td><button class="btn" data-programa="${escapar(i.programa_id)}" data-cuenta="${escapar(i.beneficiario_id)}">Ver</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+        cont.querySelectorAll('[data-cuenta]').forEach((boton) => {
+            boton.addEventListener('click', () => {
+                window.open(
+                    `/asignacion.html?programa=${encodeURIComponent(boton.dataset.programa)}&cuenta=${encodeURIComponent(boton.dataset.cuenta)}`,
+                    '_blank'
+                );
+            });
+        });
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+}// bajo el ultimo querySelectorAll el codigo es igual a la funcion cargarProgramas asi que este comentario hacia que no se tomara como cambio en esa funcion

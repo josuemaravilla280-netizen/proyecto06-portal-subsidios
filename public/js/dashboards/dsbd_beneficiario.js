@@ -1,6 +1,7 @@
 // Uso: beneficiario.html?id=<uuid de cuentas_beneficiarios_ed>
 const ID = new URLSearchParams(location.search).get('id');
-const API = `/api/beneficiarios/${encodeURIComponent(ID)}`;
+const APIB = `/api/beneficiarios/${encodeURIComponent(ID)}`;
+const APII = `/api/inscripciones/${encodeURIComponent(ID)}`;
 // en este element salen los errores
 const p_mensaje = $('mensaje');
 
@@ -24,8 +25,7 @@ function celda(tr, texto, clase) {
 }
 
 // "En revisión" -> "estado-en-revision"
-const claseEstado = (e) =>
-    'estado-' + String(e || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-');
+const claseEstado = (e) =>'estado-' + String(e || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-');
 
 function abrirSeguro(url) {
     try {
@@ -58,7 +58,7 @@ function sinImagen() {
 }
 
 async function cargarPerfil() {
-    const p = await pedir(API);
+    const p = await pedir(APIB);
     perfil = p;
     $('pNombre').textContent = p.nombre ?? '';
     $('pUbicacion').textContent = [p.departamento, p.municipio].filter(Boolean).join(' / ');
@@ -100,7 +100,7 @@ function textoEntrega(e) {
 }
 
 async function cargarProgramas() {
-    const programas = await pedir(`${API}/programas`);
+    const programas = await pedir(`${APIB}/programas`);
     const tbody = $('tbodyProgramas');
     tbody.replaceChildren();
 
@@ -120,7 +120,7 @@ async function cargarProgramas() {
             b.onclick = async () => {
                 if (!confirm(`¿Retirar la inscripción en "${p.nombre}"?`)) return;
                 try {
-                    const r = await pedir(`${API}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+                    const r = await pedir(`${APIB}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
                     await cargarProgramas();
                     mensaje(p_mensaje ,r.mensaje || 'Inscripción retirada.', 'exito');
                 } catch (e) { mensaje(p_mensaje ,e.message); }
@@ -168,7 +168,6 @@ async function cargarProgramas() {
     tbody.appendChild(tr);
 }
 
-/* GET /api/programas -> [{ id, nombre, ... }] */
 async function mostrarSelector(td, actuales) {
     try {
         const todos = await pedir('/api/programas');
@@ -185,7 +184,7 @@ async function mostrarSelector(td, actuales) {
         ok.textContent = 'Registrar';
         ok.onclick = async () => {
             try {
-                await pedir(`${API}/programas`, {
+                await pedir(`${APII}/${sel.value}`, {
                     method: 'POST',
                     body: JSON.stringify({ programa_id: sel.value }),
                 });
@@ -198,7 +197,7 @@ async function mostrarSelector(td, actuales) {
 
 /* Documentos: [{ tipo, nombre_archivo, url }] */
 async function cargarDocumentos() {
-    const docs = await pedir(`${API}/documentos`);
+    const docs = await pedir(`${APIB}/documentos`);
     const ul = $('listaDocumentos');
     ul.replaceChildren();
     if (!docs.length) {
@@ -269,7 +268,7 @@ function cerrarEdicion() {
 async function guardarBeneficiario(e) {
     e.preventDefault();
     try {
-        const r = await enviarJSON(API, 'PUT', valoresFormulario(e.currentTarget));
+        const r = await enviarJSON(APIB, 'PUT', valoresFormulario(e.currentTarget));
         cerrarEdicion();
         await cargarPerfil();
         mensaje(p_mensaje ,r.mensaje || 'Información actualizada.', 'exito');
@@ -285,8 +284,8 @@ $('btnInactivar').onclick = async () => {
     if (!confirm(`¿${verbo} la cuenta de este beneficiario?`)) return;
     try {
         const r = reactivar
-            ? await pedir(`${API}/reactivar`, { method: 'PATCH' })
-            : await pedir(API, { method: 'DELETE' });
+            ? await pedir(`${APIB}/reactivar`, { method: 'PATCH' })
+            : await pedir(APIB, { method: 'DELETE' });
         await cargarPerfil();
         mensaje(p_mensaje ,r.mensaje || `Cuenta ${reactivar ? 'reactivada' : 'inactivada'}.`, 'exito');
     } catch (e) { mensaje(p_mensaje, e.message); }
