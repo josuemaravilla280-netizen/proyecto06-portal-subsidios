@@ -5,7 +5,9 @@ const getDB = () => import('../data/getData.mjs');
 const setDB = () => import('../data/setData.mjs');
 const router = express.Router();
 const admin = permitir('admin');
-const lectura = permitir('admin', 'operador', 'beneficiario');
+// Este const comentado era antes para que se admitieran GET de cualquier cuenta,
+// pero por ahora solo estaban en donde no quiero que se requiera cuenta
+// const lectura = permitir('admin', 'operador', 'beneficiario');
 
 // Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
 const a = (fn) => (req, res) =>
@@ -117,13 +119,14 @@ const idValido = (req, res, next) => {
 };
 
 // Lista (nombres para la página de listado)
-router.get('/', lectura, a(async (_req, res) => {
+// no necesita autenticacion.
+router.get('/', a(async (_req, res) => {
     const { listarProgramas } = await getDB();
     res.json({ ok: true, datos: await listarProgramas() });
 }));
 
 // Información del programa
-router.get('/:id', lectura, idValido, a(async (req, res) => {
+router.get('/:id', idValido, a(async (req, res) => {
     const { obtenerPrograma } = await getDB();
     const dato = await obtenerPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
@@ -131,7 +134,7 @@ router.get('/:id', lectura, idValido, a(async (req, res) => {
 }));
 
 // Datos de los gráficos de pastel
-router.get('/:id/estadisticas', lectura, idValido, a(async (req, res) => {
+router.get('/:id/estadisticas', idValido, a(async (req, res) => {
     const { estadisticasPrograma } = await getDB();
     const dato = await estadisticasPrograma(req.programaId);
     if (!dato) return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
