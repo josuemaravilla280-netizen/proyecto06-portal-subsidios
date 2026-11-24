@@ -100,7 +100,7 @@ function textoEntrega(e) {
 }
 
 async function cargarProgramas() {
-    const programas = await pedir(`${APIB}/programas`);
+    const programas = await pedir(`${APII}`);
     const tbody = $('tbodyProgramas');
     tbody.replaceChildren();
 
@@ -120,7 +120,7 @@ async function cargarProgramas() {
             b.onclick = async () => {
                 if (!confirm(`¿Retirar la inscripción en "${p.nombre}"?`)) return;
                 try {
-                    const r = await pedir(`${APIB}/programas/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
+                    const r = await pedir(`${APII}/${encodeURIComponent(p.id)}`, { method: 'DELETE' });
                     await cargarProgramas();
                     mensaje(p_mensaje ,r.mensaje || 'Inscripción retirada.', 'exito');
                 } catch (e) { mensaje(p_mensaje ,e.message); }

@@ -5,7 +5,7 @@ const getDB = () => import('../data/getData.mjs');
 const setDB = () => import('../data/setData.mjs');
 const router = express.Router();
 const operador = permitir('admin', 'operador');
-const crypto = require('crypto');
+const bcrypt = require('bcrypt');
 const path = require('node:path');
 const fs = require('fs/promises');
 
@@ -84,13 +84,6 @@ router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
     const dato = await obtenerBeneficiario(req.params.id);
     if (!dato) return noEncontrado(res);
     res.json({ ok: true, dato });
-}));
-
-// Programas en que está registrado
-router.get('/:id/programas', ...conAcceso, idValido, a(async (req, res) => {
-    const { obtenerBeneficiario, programasDeBeneficiario } = await getDB();
-    if (!(await obtenerBeneficiario(req.params.id))) return noEncontrado(res);
-    res.json({ ok: true, datos: await programasDeBeneficiario(req.params.id) });
 }));
 
 // Inactivar cuenta: no borra al beneficiario, cambia el estado de su cuenta a 'inactivada'.
