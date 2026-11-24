@@ -69,9 +69,9 @@ CREATE TABLE programas_ed (
     descripcion_beneficio        TEXT,
     fecha_inicio                 DATE,
     fecha_final                  DATE,
-    documentos_registro_requiere TEXT,
     perioricidad                 INTEGER NOT NULL REFERENCES perioricidad_ec(id),
-    datos                        JSONB
+    datos                        JSONB,
+    requisitos                   JSONB
 );
 
 CREATE TABLE programas_departamentos_ep (
