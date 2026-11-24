@@ -35,6 +35,18 @@ async function api(url, opciones = {}) {
     return datos;
 }
 
+// Comprueba si existe una sesión activa al cargar la página.
+(async function comprobarSesion() {
+    try {
+        const r = await api('/api/auth/me');
+
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (_) {
+        // El usuario aún no ha iniciado sesión.
+    }
+})();
+
 // INICIO Y CIERRE DE SESIÓN
 
 // Permite mostrar u ocultar la contraseña.
@@ -535,19 +547,4 @@ async function cargarAsignaciones() {
     } catch (err) {
         mostrarMensajeVista(err.message);
     }
-}// bajo el ultimo querySelectorAll el codigo es igual a la ul
-
-// Aqui estaba la funcion `editarPrograma`
-
-// Comprueba si existe una sesión activa al cargar la página.
-(async function comprobarSesion() {
-    try {
-        const r = await api('/api/auth/me');
-
-        usuarioActual = r.usuario;
-        mostrarAplicacion();
-    } catch (_) {
-        // El usuario aún no ha iniciado sesión.
-    }
-})();
-
+}// bajo el ultimo querySelectorAll el codigo es igual a la funcion cargarProgramas asi que este comentario hacia que no se tomara como cambio en esa funcion
