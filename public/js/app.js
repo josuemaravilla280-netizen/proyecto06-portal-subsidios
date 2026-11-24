@@ -470,7 +470,7 @@ async function vistaAsignaciones() {
       ${filtro('fEntidad', 'Entidad responsable', select('fEntidad', catalogos.entidades), false)}
       ${filtro('fPrograma', 'Programa', select('fPrograma', programas.map((p) => ({ id: p.id, name: p.nombre }))), false)}
       ${filtro('fBeneficiario', 'Beneficiario (documento)', `<input id="fBeneficiario" type="text">`, false)}
-      ${filtro('fEstado', 'Estado', select('fEstado', catalogos.estados, 1), true)}
+      ${filtro('fEstado', 'Estado', select('fEstado', catalogos.estados_inscripciones, 1), true)}
       <button class="btn" type="submit">Buscar</button>
     </form>
     <div class="tabla-contenedor" id="tablaAsignaciones"></div>`;
@@ -530,7 +530,7 @@ async function cargarAsignaciones() {
               <td>${escapar(getCatalogoName(catalogos.entidades, i.entidad) ?? '')}</td>
               <td>${escapar(i.programa_nombre)}</td>
               <td>${escapar(i.documento_unico)}</td>
-              <td>${escapar(getCatalogoName(catalogos.estados, i.estado) ?? i.estado)}</td>
+              <td>${escapar(getCatalogoName(catalogos.estados_inscripciones, i.estado) ?? i.estado)}</td>
               <td><button class="btn" data-programa="${escapar(i.programa_id)}" data-cuenta="${escapar(i.beneficiario_id)}">Ver</button></td>
             </tr>`).join('')}
         </tbody>
@@ -539,7 +539,7 @@ async function cargarAsignaciones() {
         cont.querySelectorAll('[data-cuenta]').forEach((boton) => {
             boton.addEventListener('click', () => {
                 window.open(
-                    `/dashboards/asignacion.html?programa=${encodeURIComponent(boton.dataset.programa)}&cuenta=${encodeURIComponent(boton.dataset.cuenta)}`,
+                    `/asignacion.html?programa=${encodeURIComponent(boton.dataset.programa)}&cuenta=${encodeURIComponent(boton.dataset.cuenta)}`,
                     '_blank'
                 );
             });
