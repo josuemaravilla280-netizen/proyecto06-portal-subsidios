@@ -7,9 +7,8 @@
 </head>
 <body>
   <main class="panel-app">
-    <header class="barra-app"><div><span class="tag-portal">PORTAL MULTIEMPRESA</span><h1 id="tNombre">Programa</h1><p id="datosUsuario"></p></div><div style="display:flex;gap:9px"><button id="btnEditar" class="btn-secundario oculto">Editar</button><button id="btnCancelar" class="btn-secundario oculto">Cancelar</button><button id="btnInscribirme" class="btn-secundario oculto">Solicitar inscripción</button><button id="btnCerrar" class="btn-secundario">Cerrar ventana</button></div></header>
+    <header class="barra-app"><div><span class="tag-portal">PORTAL MULTIEMPRESA</span><h1 id="tNombre">Programa</h1><p id="datosUsuario"></p></div><button id="btnCerrar" class="btn-secundario">Cerrar ventana</button></header>
     <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
-    <section id="panelEdicion" class="vista-panel oculto" style="margin-top:18px"></section>
 
     <section class="vista-panel" style="margin-top:18px">
       <h2>Información</h2>
@@ -18,17 +17,6 @@
         <div><span>Cupos máximos</span><strong id="iCupos"></strong></div>
         <div class="full"><span>Entrega</span><strong id="iEntrega"></strong></div>
         <div class="full"><span>Descripción</span><strong id="iDescripcion"></strong></div>
-        <div><span>Entidad responsable</span><strong id="iEntidad"></strong></div>
-        <div><span>Estado</span><strong id="iEstado"></strong></div>
-        <div><span>Periodicidad</span><strong id="iPeriodicidad"></strong></div>
-        <div><span>Fecha de inicio</span><strong id="iInicio"></strong></div>
-        <div><span>Fecha final</span><strong id="iFin"></strong></div>
-        <div class="full"><span>Zonas habilitadas</span><strong id="iZonas"></strong></div>
-        <div class="full"><span>Requisitos de inscripción</span><strong id="iRequisitos"></strong></div>
-      </div>
-      <div class="section">
-        <h3>Datos adicionales</h3>
-        <ul id="iExtras" class="datos-lista"></ul>
       </div>
     </section>
 
@@ -37,9 +25,6 @@
     </section>
   </main>
   <footer><span>Subsidios · ayudas</span><div class="links-footer"><a href="#">Privacidad y tratamiento de datos</a><a href="#">Condiciones de uso</a></div></footer>
-  <script src="../js/common.js"defer></script>
-  <script src="../js/dashboards/common.js"defer></script>
-  <script src="../js/formularios.js" defer></script>
-  <script src="../js/dashboards/dsbd_programa.js" defer></script>
+  <script src="../js/dashboards/programa.js" defer></script>
 </body>
 </html>
