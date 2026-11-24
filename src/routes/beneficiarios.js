@@ -163,7 +163,7 @@ router.post('/:id/documentos', ...conAcceso, idValido,
         if (!TIPOS_ARCHIVO[mime] || !Buffer.isBuffer(req.body) || !req.body.length)
             return res.status(400).json({ ok: false, mensaje: 'Suba una imagen PNG o JPG, o un PDF (máximo 8 MB).' });
 
-        const { normalizarTexto } = await getDB();
+        const { normalizarTexto } = await setDB();
         const { agregarDocumentoCuenta } = await setDB();
         const nombreBase = normalizarTexto(tipo).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
         if (!tipo || tipo.length > 100 || !nombreBase) return res.status(400).json({ ok: false, mensaje: 'Falta el tipo de documento.' });
