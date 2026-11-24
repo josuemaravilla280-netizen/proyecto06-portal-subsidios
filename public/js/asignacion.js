@@ -43,45 +43,41 @@
     $('#formBuscar').querySelectorAll('select').forEach((s) =>
         s.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); buscar(); } }));
 
-    // Sin programa y cuenta en la URL: primera inscripción que coincida con los filtros
-    if (!programaId || !cuentaId) {
-        try {
-            const lista = (await api('/api/inscripciones')).datos;
+    let inscripcion;
+    try {
+        const lista = (await api('/api/inscripciones')).datos;
+        if (programaId && cuentaId) {
+            inscripcion = lista.find((i) =>
+                String(i.programa_id) === String(programaId) && String(i.beneficiario_id) === String(cuentaId));
+        } else {
             const doc = (params.get('beneficiario') || '').toLowerCase();
             const ent = params.get('entidad');
             const prog = params.get('programa');
-            const hit = lista.find((i) =>
+            inscripcion = lista.find((i) =>
                 (!prog || String(i.programa_id) === prog) &&
                 (!ent || String(i.entidad) === ent) &&
                 (!doc || String(i.documento_unico).toLowerCase().includes(doc)));
-            if (!hit) return mensaje(msg, 'No hay información que coincida con la búsqueda.');
-            programaId = hit.programa_id;
-            cuentaId = hit.beneficiario_id;
-        } catch (e) { return mensaje(msg, e.message); }
-    }
-
-    // ---- Datos ----
-    let programa, inscripcion;
-    try {
-        const rp = await api(`/api/programas/${encodeURIComponent(programaId)}`);
-        programa = rp.dato ?? rp.datos;
-        const ri = await api(`/api/inscripciones/${encodeURIComponent(cuentaId)}`);
-        inscripcion = ri.datos.find((i) => String(i.programa_id ?? i.id) === String(programaId));
-        if (!programa) return mensaje(msg, 'Programa no encontrado.');
-        if (!inscripcion) return mensaje(msg, 'Inscripción no encontrada.');
+            if (inscripcion) {
+                programaId = inscripcion.programa_id;
+                cuentaId = inscripcion.beneficiario_id;
+            }
+        }
     } catch (e) { return mensaje(msg, e.message); }
 
-    $('#titulo').textContent = programa.nombre;
+    if (!inscripcion) return mensaje(msg, 'No hay información que coincida con la búsqueda.');
+
+    $('#titulo').textContent =
+        `${inscripcion.programa_nombre} · ${inscripcion.beneficiario_nombre} (${inscripcion.documento_unico})`;
 
     // Requisitos del programa
-    const reqs = programa.requisitos || [];
+    const reqs = inscripcion.programa_requisitos || [];
     $('#listaPrograma').innerHTML = reqs.length
         ? reqs.map((r) => `<li><span>${escapar(r.nombre || r.campo || '')}</span>
         <b>${escapar(r.tipo || '')}${r.obligatorio ? ' · obligatorio' : ''}${(r.opciones || []).length ? ' · ' + escapar(r.opciones.join(', ')) : ''}</b></li>`).join('')
         : '<li>No hay información sobre requisitos del programa.</li>';
 
     // Requisitos de la inscripción
-    const ri = inscripcion.requisitos || {};
+    const ri = inscripcion.inscripcion_requisitos || {};
     const resp = Object.entries(ri.respuestas || {});
     const cuenta = ri.datos_cuenta || [];
     $('#listaInscripcion').innerHTML = (resp.length || cuenta.length)
@@ -94,7 +90,7 @@
     const btnC = $('#btnCancelar');
     btnA.disabled = btnC.disabled = false;
 
-    const url = `/api/inscripciones/${encodeURIComponent(cuentaId)}/${encodeURIComponent(programaId)}/estado`;
+    const url = `/api/inscripciones/${encodeURIComponent(cuentaId)}/${encodeURIComponent(programaId)}`;
     async function cambiarEstado(estado, motivo = '') {
         btnA.disabled = btnC.disabled = true;
         try {
@@ -106,7 +102,7 @@
         }
     }
 
-    btnA.addEventListener('click', () => cambiarEstado('aprovada'));
+    btnA.addEventListener('click', () => cambiarEstado(3));
 
     let pidiendoMotivo = false;
     btnC.addEventListener('click', () => {
@@ -116,6 +112,6 @@
             $('#motivo').focus();
             return;
         }
-        cambiarEstado('cancelada', $('#motivo').value.trim());
+        cambiarEstado(2, $('#motivo').value.trim());
     });
 })();

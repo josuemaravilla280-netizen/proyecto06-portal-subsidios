@@ -20,6 +20,7 @@ const conAcceso = [
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const idValido = (req, res, next) => UUID.test(req.params.id) ? next() : res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
+const idProgramaValido = (id) => (!Number.isInteger(id) || id <= 0);
 
 const a = (fn) => (req, res) =>
     fn(req, res).catch((e) => {
@@ -46,7 +47,6 @@ router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
     res.json({ ok: true, datos: await programasDeBeneficiario(beneficiarioId) });
 }));
 
-// Registrar en otro programa (solo personal)
 router.post('/:id/:programaId', ...conAcceso, idValido, a(async (req, res) => {
     const programaId = Number(req.params.programaId);
     const beneficiarioId = req.params.id;
@@ -100,6 +100,30 @@ router.post('/:id/:programaId', ...conAcceso, idValido, a(async (req, res) => {
         if (e.code === '23503') return noEncontrado(res);
         throw e;
     }
+}));
+
+// Aprobar o denegar una solicitud en espera. El motivo se guarda en datos.decision.
+const APROBADA = 3, DENEGADA = 2;
+const DECISIONES = [DENEGADA, APROBADA];
+router.put('/:id/:programaId', operador, idValido, a(async (req, res) => {
+    const programaId = Number(req.params.programaId);
+    const beneficiarioId = req.params.id;
+    if (!Number.isInteger(programaId) || programaId < 1)
+        return res.status(404).json({ ok: false, mensaje: 'Programa no encontrado.' });
+ 
+    const estado = Number(req.body?.estado);
+    if (!DECISIONES.includes(estado))
+        return res.status(400).json({ ok: false, mensaje: 'Estado no válido.' });
+ 
+    const motivo = String(req.body?.motivo ?? '').trim();
+    if (motivo.length > 500)
+        return res.status(400).json({ ok: false, mensaje: 'El motivo es demasiado largo.' });
+ 
+    const { resolverInscripcion } = await setDB();
+    const r = await resolverInscripcion(beneficiarioId, programaId, estado, motivo || null);
+    if (r.noEncontrado) return res.status(404).json({ ok: false, mensaje: 'Inscripción no encontrada.' });
+    if (r.yaResuelta) return res.status(409).json({ ok: false, mensaje: 'La inscripción ya no está en espera.' });
+    res.json({ ok: true, mensaje: estado === APROBADA ? 'Inscripción aprobada.' : 'Inscripción denegada.' });
 }));
 
 // Retirar de un programa: no borra la inscripción, cambia su estado.
