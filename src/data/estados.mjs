@@ -14,4 +14,4 @@ export function estadoPrograma(nombre) {
 
 // [{ id, nombre }] de un diccionario (para enviarlo al cliente junto con los demás catálogos).
 export const listaEstados = (catalogo) =>
-    Object.entries(ESTADOS[catalogo]).map(([nombre, id]) => ({ id, nombre }));
+    Object.entries(ESTADOS[catalogo]).map(([name, id]) => ({ id, name }));
