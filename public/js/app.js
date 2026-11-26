@@ -544,7 +544,119 @@ async function cargarAsignaciones() {
                 );
             });
         });
+<<<<<<< HEAD
+      });
+
+    // Asigna la acción de eliminación a cada programa.
+    cont.querySelectorAll('[data-eliminar-programa]')
+      .forEach((boton) => {
+        boton.addEventListener('click', () => {
+          eliminarPrograma(Number(boton.dataset.eliminarPrograma));
+        });
+      });
+  } catch (err) {
+    mostrarMensajeVista(err.message);
+  }
+}
+
+// Busca un programa y carga sus datos para editarlos.
+async function editarPrograma(id) {
+  try {
+    const r = await api('/api/programas');
+    const d = r.datos.find((elemento) => elemento.id === id);
+
+    if (!d) return;
+
+    programaEditando = id;
+
+    vista.innerHTML = `
+      <h2>Editar programa</h2>
+
+      <p>HU07 · Actualice la información del programa.</p>
+
+      ${formPrograma(d)}
+
+      <div class="tabla-contenedor" id="tablaProgramas"></div>
+    `;
+
+    $('#formPrograma').addEventListener('submit', guardarPrograma);
+
+    $('#cancelarPrograma').addEventListener('click', () => {
+      programaEditando = null;
+      vistaProgramas();
+    });
+
+    await cargarProgramas();
+  } catch (err) {
+    mostrarMensajeVista(err.message);
+  }
+}
+
+// Elimina un programa después de confirmar la acción.
+async function eliminarPrograma(id) {
+  if (!confirm('¿Está seguro de eliminar este programa?')) {
+    return;
+  }
+
+  try {
+    const r = await api(`/api/programas/${id}`, {
+      method: 'DELETE'
+    });
+
+    mostrarMensajeVista(r.mensaje, 'exito');
+
+    await cargarProgramas();
+  } catch (err) {
+    mostrarMensajeVista(err.message);
+  }
+}
+
+
+// Comprueba si existe una sesión activa al cargar la página.
+(async function comprobarSesion() {
+  try {
+    const r = await api('/api/auth/me');
+
+    usuarioActual = r.usuario;
+    mostrarAplicacion();
+  } catch (_) {
+    // El usuario aún no ha iniciado sesión.
+  }
+})();
+
+
+// Muestra un aviso para las páginas que aún no están implementadas.
+document.querySelectorAll('[data-static]').forEach((enlace) => {
+  enlace.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    alert(
+      'Página informativa pendiente de elaboración; ' +
+      'no forma parte de las ocho HU de este Sprint.'
+    );
+  });
+});
+
+
+
+const soporteBtn = document.getElementById('soporteBtn');
+const soportePanel = document.getElementById('soportePanel');
+
+soporteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    soportePanel.classList.toggle('activo');
+});
+
+// Cierra el panel si el usuario hace clic fuera de él
+document.addEventListener('click', (e) => {
+    if (!soportePanel.contains(e.target) && e.target !== soporteBtn) {
+        soportePanel.classList.remove('activo');
+    }
+});
+
+=======
     } catch (err) {
         mostrarMensajeVista(err.message);
     }
 }// bajo el ultimo querySelectorAll el codigo es igual a la funcion cargarProgramas asi que este comentario hacia que no se tomara como cambio en esa funcion
+>>>>>>> origin/develop
