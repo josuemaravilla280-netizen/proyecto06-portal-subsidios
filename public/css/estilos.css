@@ -100,7 +100,7 @@ body {
 
 .descripcion-portal {
     max-width: 480px;
-    color: #b7c5d5;
+    color: #c8dfff;
     font-size: 0.98rem;
     line-height: 1.7;
     margin-bottom: 38px;
@@ -145,7 +145,7 @@ body {
 
 .lista-beneficios p {
     font-size: 0.84rem;
-    color: #a8b7c8;
+    color: #dbecff;
     line-height: 1.55;
 }
 
