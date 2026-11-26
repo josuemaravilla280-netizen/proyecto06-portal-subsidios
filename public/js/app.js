@@ -52,8 +52,10 @@ async function api(url, opciones = {}) {
 // Permite mostrar u ocultar la contraseña.
 $('#btnTogglePassword').addEventListener('click', () => {
     const campo = $('#password');
+    const mostrar = campo.type === 'password';
 
-    campo.type = campo.type === 'password' ? 'text' : 'password';
+    campo.type = mostrar ? 'text' : 'password';
+    $('#btnTogglePassword').setAttribute('aria-pressed', String(mostrar));
 });
 
 // Procesa el formulario de inicio de sesión.
