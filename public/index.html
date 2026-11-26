@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inicio de sesión - Portal de Subsidios</title><link rel="stylesheet" href="./css/estilos.css">
+  <title>Portal de Subsidios</title><link rel="stylesheet" href="./css/estilos.css">
 </head>
 <body>
   <main class="pantalla-layout" id="pantallaLogin">
@@ -20,9 +20,9 @@
       <h2>Inicio de sesión</h2><p class="subtitulo">Ingresa tu DUI o número de pasaporte y contraseña.</p>
       <p id="mensajeLogin" class="mensaje" role="status" aria-live="polite"></p>
       <form id="inicioForm">
-        <div class="input-verificacion"><label for="identificador">DUI o número de pasaporte</label><input type="text" id="identificador" autocomplete="username" placeholder="01234567-8" required></div>
+                <div class="input-verificacion"><label for="documento_unico">DUI o número de pasaporte</label><input type="text" id="documento_unico" autocomplete="username" placeholder="01234567-8" required></div>
         <div class="input-verificacion"><label for="password">Contraseña</label><div class="contenedor-password"><input type="password" id="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required><button type="button" id="btnTogglePassword" class="btn-toggle-password" aria-label="Mostrar u ocultar contraseña"></button></div></div>
-        <button type="submit" class="btn-continuar">Continuar</button>
+                <button type="submit" class="btn-continuar">Continuar</button>
       </form>
       
     </section>
@@ -33,33 +33,5 @@
     <section id="vista" class="vista-panel"><h2>Bienvenido</h2><p>Seleccione una opción del menú según sus permisos.</p></section>
   </main>
   <footer><span>Subsidios · ayudas</span><div class="links-footer"><a href="#" data-static="privacidad">Privacidad y tratamiento de datos</a><a href="#" data-static="condiciones">Condiciones de uso</a></div></footer>
-  <!-- Widget flotante de soporte -->
-<div class="soporte-widget">
-    <!-- Panel que se despliega -->
-    <div class="soporte-panel" id="soportePanel">
-        <div class="soporte-header">
-            <h4>¿Olvidaste tu contraseña?</h4>
-            <p>Elige cómo quieres recibir ayuda:</p>
-        </div>
-        <div class="soporte-opciones">
-            <a href="ayuda.html#contacto-soporte" class="soporte-item">
-                <span>✉️</span> Enviar solicitud a soporte
-            </a>
-            <a href="Correo.html" class="soporte-item">
-                <span>📄</span> Ver guía de recuperación
-            </a>
-            <a href="mailto:soportesubsidia@gmail.com" class="soporte-item">
-                <span>🛠️</span> Escribir a correo directo
-            </a>
-        </div>
-    </div>
-
-    <!-- Botón principal -->
-    <button class="soporte-btn" id="soporteBtn" aria-label="Ayuda y contacto">
-        ?
-    </button>   
-</div>
-  
-  <script src="js/app.js" defer></script>
-
+  <script src="/js/app.js" defer></script>
 </body></html>

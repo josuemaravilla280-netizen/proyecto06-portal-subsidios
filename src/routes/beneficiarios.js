@@ -1,40 +1,208 @@
 const express = require('express');
-const { beneficiarios, nuevoIdBeneficiario } = require('../data/memoria');
 const { permitir } = require('../middleware/auth');
+// get/setData.mjs es ESM: se carga con import() dinámico.
+const getDB = () => import('../data/getData.mjs');
+const setDB = () => import('../data/setData.mjs');
 const router = express.Router();
-const operador = permitir('administrador', 'operador');
-function limpiar(body) {
-  return {
-    nombre: String(body.nombre || '').trim(),
-    apellido: String(body.apellido || '').trim(),
-    identificador: String(body.identificador || '').trim(),
-    telefono: String(body.telefono || '').trim(),
-    correo: String(body.correo || '').trim(),
-    direccion: String(body.direccion || '').trim(),
-    municipio: String(body.municipio || '').trim(),
-    departamento: String(body.departamento || '').trim()
-  };
+const operador = permitir('admin', 'operador');
+const bcrypt = require('bcrypt');
+const path = require('node:path');
+const fs = require('fs/promises');
+
+const usuarioDe = (req) => req.usuario ?? req.user ?? req.session?.usuario ?? null;
+
+// solo el staff ve los beneficiarios, un beneficiario puede solo verse a si mismo
+const conAcceso = [
+    permitir('admin', 'operador', 'beneficiario'),
+    (req, res, next) => {
+        const u = usuarioDe(req);
+        if (u && ['admin', 'operador'].includes(u.rol)) return next();
+        if (u && u.rol === 'beneficiario' && String(u.id) === req.params.id) return next();
+        res.status(403).json({ ok: false, mensaje: 'No tiene permiso para este beneficiario.' });
+    },
+];
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const idValido = (req, res, next) => UUID.test(req.params.id) ? next() : res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
+
+// Captura errores async; 23503 = referencia inexistente, 22xxx = dato mal formado.
+const a = (fn) => (req, res) =>
+    fn(req, res).catch((e) => {
+        if (e.code === '23505') return res.status(409).json({ ok: false, mensaje: 'Ya existe un registro con ese correo, teléfono o documento.' });
+        if (e.code === '23503') return res.status(400).json({ ok: false, mensaje: 'Alguno de los valores seleccionados no es válido.' });
+        if (e.code === '22007' || e.code === '22008' || e.code === '22P02') return res.status(400).json({ ok: false, mensaje: 'Alguno de los datos tiene un formato no válido.' });
+        console.error(e);
+        res.status(500).json({ ok: false, mensaje: 'Error del servidor.' });
+    });
+
+
+// "01234567-8" => DUI; cualquier otro valor => pasaporte. Se guarda sin guion.
+function documentoDe(txt) {
+    const t = String(txt || '').trim().toUpperCase().replace(/-/g, '');
+    return { documento: t, isDui: /^\d{9}$/.test(t) };
 }
-function validar(d) {
-  if (!d.nombre || !d.apellido || !d.identificador || !d.telefono || !d.direccion || !d.municipio || !d.departamento) return 'Complete todos los campos obligatorios.';
-  if (d.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.correo)) return 'El correo electrónico no tiene un formato válido.';
-  return null;
+
+function limpiar(b) {
+    const t = (v) => String(v ?? '').trim();
+    return {
+        ...documentoDe(b.documento_unico ?? b.documento),
+        nombre: t(b.nombre),
+        apellido: t(b.apellido),
+        nacimiento: t(b.nacimiento),
+        telefono: t(b.telefono),
+        email: t(b.correo ?? b.email),
+        departamento: t(b.departamento), // nombre, como en departamentos_ec
+        municipio: t(b.municipio),
+        direccion: t(b.direccion),
+    };
 }
-router.get('/', operador, (req, res) => res.json({ ok: true, datos: beneficiarios }));
-router.post('/', operador, (req, res) => {
-  const datos = limpiar(req.body); const error = validar(datos);
-  if (error) return res.status(400).json({ ok: false, mensaje: error });
-  if (beneficiarios.some(b => b.identificador.toLowerCase() === datos.identificador.toLowerCase())) return res.status(409).json({ ok: false, mensaje: 'Ya existe un beneficiario con ese DUI o pasaporte.' });
-  const nuevo = { id: nuevoIdBeneficiario(), ...datos, creadoEn: new Date().toISOString() };
-  beneficiarios.push(nuevo); res.status(201).json({ ok: true, dato: nuevo, mensaje: 'Beneficiario registrado.' });
+
+function validar(d, nacimientoObligatorio) {
+    if (!d.nombre || !d.apellido || !d.documento || !d.telefono || !d.municipio || !d.departamento || !d.direccion)
+        return 'Complete todos los campos obligatorios.';
+    if (!/^\d+$/.test(d.municipio)) return 'El municipio no es válido.';
+    if (d.direccion.length > 250) return 'La dirección no puede superar los 250 caracteres.';
+    if (!/^[A-Z0-9]{1,9}$/.test(d.documento)) return 'El DUI o pasaporte no tiene un formato válido.';
+    if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return 'El correo electrónico no tiene un formato válido.';
+    if (nacimientoObligatorio && !d.nacimiento) return 'Falta la fecha de nacimiento.';
+    if (d.nacimiento && (!/^\d{4}-\d{2}-\d{2}$/.test(d.nacimiento) || d.nacimiento > new Date().toISOString().slice(0, 10)))
+        return 'La fecha de nacimiento no es válida.';
+    return null;
+}
+
+const noEncontrado = (res) => res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
+
+// Lista (nombres para la página de listado)
+router.get('/', operador, a(async (_req, res) => {
+    const { listarBeneficiarios } = await getDB();
+    res.json({ ok: true, datos: await listarBeneficiarios() });
+}));
+
+// Perfil
+router.get('/:id', ...conAcceso, idValido, a(async (req, res) => {
+    const { obtenerBeneficiario } = await getDB();
+    const dato = await obtenerBeneficiario(req.params.id);
+    if (!dato) return noEncontrado(res);
+    res.json({ ok: true, dato });
+}));
+
+// Inactivar cuenta: no borra al beneficiario, cambia el estado de su cuenta a 'inactivada'.
+router.delete('/:id', operador, idValido, a(async (req, res) => {
+    const { inactivarCuenta } = await setDB();
+    const r = await inactivarCuenta(req.params.id);
+    if (r.noEncontrado) return noEncontrado(res);
+    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está inactivada.' });
+    res.json({ ok: true, mensaje: 'Cuenta inactivada.' });
+}));
+router.patch('/:id/reactivar', operador, idValido, a(async (req, res) => {
+    const { reactivarCuenta } = await setDB();
+    const r = await reactivarCuenta(req.params.id);
+    if (r.estadoFaltante) return res.status(500).json({ ok: false, mensaje: `Falta el estado "${r.estadoFaltante}" en el catálogo.` });
+    if (r.noEncontrado) return noEncontrado(res);
+    if (r.yaEstaba) return res.status(409).json({ ok: false, mensaje: 'La cuenta ya está activa.' });
+    res.json({ ok: true, mensaje: 'Cuenta reactivada.' });
+}));
+
+// Documentos subidos
+router.get('/:id/documentos', ...conAcceso, idValido, a(async (req, res) => {
+    const { beneficiarioDocuments } = await getDB();
+    const datos = await beneficiarioDocuments(req.params.id);
+    if (!datos) return noEncontrado(res);
+    res.json({ ok: true, datos: beneficiarioDocumentList(datos) });
+}));
+
+// Registrar beneficiario
+router.post('/', operador, a(async (req, res) => {
+    const d = limpiar(req.body);
+    const error = validar(d, true);
+    if (error) return res.status(400).json({ ok: false, mensaje: error });
+    const { crearBeneficiario } = await setDB();
+    const r = await crearBeneficiario(d);
+    if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
+    if (r.municipioInvalido) return res.status(400).json({ ok: false, mensaje: 'El municipio no pertenece al departamento seleccionado.' });
+    if (r.duplicado) return res.status(409).json({ ok: false, mensaje: 'Ya existe un beneficiario con ese DUI o pasaporte.' });
+    res.status(201).json({ ok: true, dato: { id: r.id }, mensaje: 'Beneficiario registrado.' });
+}));
+
+// Actualizar beneficiario
+router.put('/:id', ...conAcceso, idValido, a(async (req, res) => {
+    const d = limpiar(req.body);
+    const error = validar(d, false);
+    if (error) return res.status(400).json({ ok: false, mensaje: error });
+    const { actualizarBeneficiario } = await setDB();
+    const r = await actualizarBeneficiario(req.params.id, d);
+    if (r.noEncontrado) return noEncontrado(res);
+    if (r.departamentoInvalido) return res.status(400).json({ ok: false, mensaje: 'Departamento no válido.' });
+    if (r.municipioInvalido) return res.status(400).json({ ok: false, mensaje: 'El municipio no pertenece al departamento seleccionado.' });
+    if (r.documentoDistinto) return res.status(400).json({ ok: false, mensaje: 'El DUI o pasaporte no se puede modificar.' });
+    res.json({ ok: true, dato: { id: r.id }, mensaje: 'Información actualizada.' });
+}));
+
+// En cuentas_beneficiarios_ed.datos.documentos: { "acta de nacimiento": "enlace/al/archivo" }.
+const TIPOS_ARCHIVO = { 'image/png': 'png', 'image/jpeg': 'jpg', 'application/pdf': 'pdf' };
+const MIME_POR_EXTENSION = { png: 'image/png', jpg: 'image/jpeg', pdf: 'application/pdf' };
+const CARPETA_DOCS = path.join(process.cwd(), 'uploads', 'documentos');
+const decodificar = (v) => { try { return decodeURIComponent(String(v ?? '')); } catch { return ''; } };
+const capitalizar = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+// { "nombre documento": "/ruta/nombre_documento.png" } -> [{ tipo, url, nombre_archivo }]
+const beneficiarioDocumentList = (documentos) =>
+    Object.entries(documentos).map(([clave, url]) => ({
+        tipo: capitalizar(clave),
+        url,
+        nombre_archivo: String(url).split('/').filter(Boolean).pop() || '',
+    }));
+
+// El cuerpo es el archivo; el tipo de documento y el nombre van en cabeceras.
+// El archivo se guarda como uploads/documentos/<cuenta>/<tipo-en-minusculas>.<ext>.
+router.post('/:id/documentos', ...conAcceso, idValido,
+    express.raw({ type: Object.keys(TIPOS_ARCHIVO), limit: '8mb' }),
+    a(async (req, res) => {
+        const mime = String(req.headers['content-type'] || '').split(';')[0].trim();
+        const tipo = decodificar(req.headers['x-tipo-documento']).trim();
+        if (!TIPOS_ARCHIVO[mime] || !Buffer.isBuffer(req.body) || !req.body.length)
+            return res.status(400).json({ ok: false, mensaje: 'Suba una imagen PNG o JPG, o un PDF (máximo 8 MB).' });
+
+        const { normalizarTexto } = await setDB();
+        const { agregarDocumentoCuenta } = await setDB();
+        const nombreBase = normalizarTexto(tipo).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+        if (!tipo || tipo.length > 100 || !nombreBase) return res.status(400).json({ ok: false, mensaje: 'Falta el tipo de documento.' });
+
+        // req.params.id ya se validó como UUID: es seguro usarlo como nombre de carpeta.
+        const archivo = `${nombreBase}.${TIPOS_ARCHIVO[mime]}`;
+        const absoluta = path.join(CARPETA_DOCS, req.params.id, archivo);
+        await fs.mkdir(path.dirname(absoluta), { recursive: true });
+        try {
+            await fs.writeFile(absoluta, req.body, { flag: 'wx' }); // no sobrescribe un archivo existente
+        } catch (e) {
+            if (e.code === 'EEXIST') return res.status(409).json({ ok: false, mensaje: 'Ya existe un documento de ese tipo.' });
+            throw e;
+        }
+
+        const enlace = `/api/beneficiarios/${req.params.id}/documentos/${archivo}`;
+        const r = await agregarDocumentoCuenta(req.params.id, tipo, enlace);
+        if (r.noEncontrado || r.duplicado) {
+            await fs.unlink(absoluta).catch(() => { });
+            return r.noEncontrado
+                ? noEncontrado(res)
+                : res.status(409).json({ ok: false, mensaje: 'Ya existe un documento de ese tipo.' });
+        }
+        res.status(201).json({
+            ok: true,
+            dato: { tipo: capitalizar(r.clave), url: enlace, nombre_archivo: archivo },
+            mensaje: 'Documento subido.',
+        });
+    }));
+
+// Ver un documento subido por el sistema (solo personal o el propio beneficiario).
+router.get('/:id/documentos/:archivo', ...conAcceso, idValido, (req, res) => {
+    const extension = (req.params.archivo.match(/^[a-z0-9-]+\.(png|jpg|pdf)$/) || [])[1];
+    if (!extension) return res.status(404).json({ ok: false, mensaje: 'Documento no encontrado.' });
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.type(MIME_POR_EXTENSION[extension]).sendFile(
+        path.join(CARPETA_DOCS, req.params.id, req.params.archivo),
+        (err) => { if (err && !res.headersSent) res.status(404).json({ ok: false, mensaje: 'Documento no encontrado.' }); }
+    );
 });
-router.put('/:id', operador, (req, res) => {
-  const id = Number(req.params.id); const actual = beneficiarios.find(b => b.id === id);
-  if (!actual) return res.status(404).json({ ok: false, mensaje: 'Beneficiario no encontrado.' });
-  const datos = limpiar(req.body); const error = validar(datos);
-  if (error) return res.status(400).json({ ok: false, mensaje: error });
-  if (beneficiarios.some(b => b.id !== id && b.identificador.toLowerCase() === datos.identificador.toLowerCase())) return res.status(409).json({ ok: false, mensaje: 'Ese documento ya pertenece a otro beneficiario.' });
-  Object.assign(actual, datos, { actualizadoEn: new Date().toISOString() });
-  res.json({ ok: true, dato: actual, mensaje: 'Información actualizada.' });
-});
+
 module.exports = router;

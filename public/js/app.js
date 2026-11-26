@@ -12,208 +12,212 @@ let usuarioActual = null;
 let programaEditando = null;
 let beneficiarioEditando = null;
 
-// Departamentos disponibles para registrar beneficiarios.
-const departamentos = [
-  'Ahuachapán',
-  'Cabañas',
-  'Chalatenango',
-  'Cuscatlán',
-  'La Libertad',
-  'La Paz',
-  'La Unión',
-  'Morazán',
-  'San Miguel',
-  'San Salvador',
-  'San Vicente',
-  'Santa Ana',
-  'Sonsonate',
-  'Usulután'
-];
-
-
-// Evita que los valores ingresados se interpreten como HTML.
-function escapar(valor = '') {
-  return String(valor).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  })[c]);
-}
-
-// Muestra un mensaje de error o de éxito.
-function mensaje(elemento, texto, tipo = 'error') {
-  elemento.textContent = texto;
-  elemento.className = `mensaje visible ${tipo}`;
-}
-
 // Envía solicitudes al servidor y procesa las respuestas.
 async function api(url, opciones = {}) {
-  const respuesta = await fetch(url, {
-    credentials: 'same-origin',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(opciones.headers || {})
-    },
-    ...opciones
-  });
+    const respuesta = await fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(opciones.headers || {})
+        },
+        ...opciones
+    });
 
-  const datos = await respuesta.json().catch(() => ({
-    ok: false,
-    mensaje: 'Respuesta no válida del servidor.'
-  }));
+    const datos = await respuesta.json().catch(() => ({
+        ok: false,
+        mensaje: 'Respuesta no válida del servidor.'
+    }));
 
-  if (!respuesta.ok) {
-    throw new Error(datos.mensaje || 'Ocurrió un error.');
-  }
+    if (!respuesta.ok) {
+        throw new Error(datos.mensaje || 'Ocurrió un error.');
+    }
 
-  return datos;
+    return datos;
 }
+
+// Comprueba si existe una sesión activa al cargar la página.
+(async function comprobarSesion() {
+    try {
+        const r = await api('/api/auth/me');
+
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (_) {
+        // El usuario aún no ha iniciado sesión.
+    }
+})();
 
 // INICIO Y CIERRE DE SESIÓN
 
 // Permite mostrar u ocultar la contraseña.
 $('#btnTogglePassword').addEventListener('click', () => {
-  const campo = $('#password');
+    const campo = $('#password');
 
-  campo.type = campo.type === 'password' ? 'text' : 'password';
+    campo.type = campo.type === 'password' ? 'text' : 'password';
 });
 
 // Procesa el formulario de inicio de sesión.
 $('#inicioForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  mensajeLogin.className = 'mensaje';
+    e.preventDefault();
+    mensajeLogin.className = 'mensaje';
 
-  try {
-    const r = await api('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({
-        identificador: $('#identificador').value.trim(),
-        password: $('#password').value
-      })
-    });
+    try {
+        const r = await api('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                documento_unico: $('#documento_unico').value.trim(),
+                password: $('#password').value
+            })
+        });
 
-    usuarioActual = r.usuario;
-    mostrarAplicacion();
-  } catch (err) {
-    mensaje(mensajeLogin, err.message);
-  }
+        usuarioActual = r.usuario;
+        mostrarAplicacion();
+    } catch (err) {
+        mensaje(mensajeLogin, err.message);
+    }
 });
 
 // Cierra la sesión y regresa a la pantalla de inicio.
 $('#btnSalir').addEventListener('click', async () => {
-  try {
-    await api('/api/auth/logout', {
-      method: 'POST',
-      body: '{}'
-    });
-  } finally {
-    usuarioActual = null;
-    panelApp.classList.add('oculto');
-    pantallaLogin.classList.remove('oculto');
-    $('#inicioForm').reset();
-    mensajeLogin.className = 'mensaje';
-  }
+    try {
+        await api('/api/auth/logout', {
+            method: 'POST',
+            body: '{}'
+        });
+    } finally {
+        usuarioActual = null;
+        panelApp.classList.add('oculto');
+        pantallaLogin.classList.remove('oculto');
+        $('#inicioForm').reset();
+        mensajeLogin.className = 'mensaje';
+    }
 });
 
+function addEditarButton(text, id) {
+    return `
+                  <button
+                    class="btn"
+                    data-editar-${text}="${id}"
+                  >
+                    ${(usuarioActual.rol == "admin") || (usuarioActual.rol == "operador" && text == "beneficiario") ? "Editar" : "ver"}
+                  </button>`
+}
+
 // Muestra la aplicación después de iniciar sesión.
-function mostrarAplicacion() {
-  pantallaLogin.classList.add('oculto');
-  panelApp.classList.remove('oculto');
+async function mostrarAplicacion() {
+    pantallaLogin.classList.add('oculto');
+    panelApp.classList.remove('oculto');
 
-  $('#datosUsuario').textContent =
-    `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
+    $('#datosUsuario').textContent =
+        `${usuarioActual.nombre} · Rol: ${usuarioActual.rol}`;
+    construirMenu();
 
-  construirMenu();
-  inicio();
+    try {
+        await cargarCatalogos();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+
+    inicio();
 }
 
 // Crea las opciones disponibles según el rol.
 function construirMenu() {
-  const menu = $('#menuPrincipal');
-  menu.innerHTML = '';
+    const menu = $('#menuPrincipal');
+    menu.innerHTML = '';
 
-  const opciones = [
-    ['inicio', 'Inicio', true],
-    [
-      'beneficiarios',
-      'Beneficiarios',
-      ['administrador', 'operador'].includes(usuarioActual.rol)
-    ],
-    [
-      'programas',
-      'Programas',
-      usuarioActual.rol === 'administrador'
-    ]
-  ];
+    const opciones = [
+        ['inicio', 'Inicio', true],
+        [
+            'beneficiarios',
+            'Beneficiarios',
+            ['admin', 'operador'].includes(usuarioActual.rol)
+        ],
+        ['programas', 'Programas', true],
+        [
+            'asignaciones',
+            'Asignaciones',
+            ['admin', 'operador'].includes(usuarioActual.rol)
+        ]
+    ];
 
-  // Crea solamente las opciones permitidas para el usuario.
-  opciones
-    .filter((opcion) => opcion[2])
-    .forEach(([id, titulo]) => {
-      const boton = document.createElement('button');
+    // Crea solamente las opciones permitidas para el usuario.
+    opciones
+        .filter((opcion) => opcion[2])
+        .forEach(([id, titulo]) => {
+            const boton = document.createElement('button');
 
-      boton.textContent = titulo;
-      boton.dataset.vista = id;
+            boton.textContent = titulo;
+            boton.dataset.vista = id;
 
-      boton.addEventListener('click', () => {
-        menu.querySelectorAll('button').forEach((elemento) => {
-          elemento.classList.toggle('activo', elemento === boton);
+            boton.addEventListener('click', () => {
+                menu.querySelectorAll('button').forEach((elemento) => {
+                    elemento.classList.toggle('activo', elemento === boton);
+                });
+
+                if (id === 'inicio') inicio();
+                if (id === 'beneficiarios') vistaBeneficiarios();
+                if (id === 'programas') vistaProgramas();
+                if (id === 'asignaciones') vistaAsignaciones();
+            });
+
+            menu.appendChild(boton);
         });
 
-        if (id === 'inicio') inicio();
-        if (id === 'beneficiarios') vistaBeneficiarios();
-        if (id === 'programas') vistaProgramas();
-      });
+    //     if (id === 'inicio') inicio();
+    //     if (id === 'beneficiarios') vistaBeneficiarios();
+    //     if (id === 'programas') vistaProgramas();
 
-      menu.appendChild(boton);
-    });
+    //   });
+
+    //   menu.appendChild(boton);
+    // });
 }
 
 // Muestra la pantalla principal.
 function inicio() {
-  vista.innerHTML = `
+    vista.innerHTML = `
     <h2>Bienvenido al Portal de Subsidios</h2>
 
     <p>
       Ha iniciado sesión correctamente.
-      Las opciones disponibles dependen de su rol.
-    </p>
-
-    <p class="notice">
-      Sprint 1: los registros son temporales y se perderán
-      al reiniciar el servidor.
     </p>
   `;
+    if (usuarioActual.rol == "beneficiario") {
+        const btn = document.createElement('button');
+        btn.innerText = "Ver mis datos";
+        btn.className = "btn";
+        btn.onclick = () => window.location.href = `/dashboards/beneficiario.html?id=${encodeURIComponent(usuarioActual.id)}`;
+        vista.appendChild(btn);
+    }
 
-  $('#menuPrincipal button')?.classList.add('activo');
+    $('#menuPrincipal button')?.classList.add('activo');
 }
 
 // Muestra mensajes dentro de la vista actual.
 function mostrarMensajeVista(texto, tipo = 'error') {
-  let elemento = $('#mensajeVista');
+    let elemento = $('#mensajeVista');
 
-  if (!elemento) {
-    elemento = document.createElement('p');
-    elemento.id = 'mensajeVista';
-    elemento.className = 'mensaje';
-    vista.prepend(elemento);
-  }
+    if (!elemento) {
+        elemento = document.createElement('p');
+        elemento.id = 'mensajeVista';
+        elemento.className = 'mensaje';
+        vista.prepend(elemento);
+    }
 
-  mensaje(elemento, texto, tipo);
+    mensaje(elemento, texto, tipo);
 }
 
 
 // Muestra el formulario y la tabla de beneficiarios.
 async function vistaBeneficiarios() {
-  beneficiarioEditando = null;
+    beneficiarioEditando = null;
 
-  vista.innerHTML = `
+    vista.innerHTML = `
     <h2>Registro de beneficiarios</h2>
 
     <p>
-      HU03, HU04 y HU05 · Complete los datos personales
+      Complete los datos personales
       para registrar o actualizar un beneficiario.
     </p>
 
@@ -222,175 +226,59 @@ async function vistaBeneficiarios() {
     <div class="tabla-contenedor" id="tablaBeneficiarios"></div>
   `;
 
-  $('#formBeneficiario').addEventListener(
-    'submit',
-    guardarBeneficiario
-  );
+    $('#formBeneficiario').addEventListener(
+        'submit',
+        guardarBeneficiario
+    );
+    $('#cancelarBeneficiario').addEventListener('click', () => {
+        $('#formBeneficiario').reset();
+    });
 
-  await cargarBeneficiarios();
-}
-
-// Construye el formulario de registro o actualización.
-function formBeneficiario(d = {}) {
-  return `
-    <form id="formBeneficiario">
-      <div class="form-grid">
-
-        <div class="field">
-          <label for="nombre">Nombres *</label>
-          <input
-            id="nombre"
-            name="nombre"
-            value="${escapar(d.nombre || '')}"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="apellido">Apellidos *</label>
-          <input
-            id="apellido"
-            name="apellido"
-            value="${escapar(d.apellido || '')}"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="identificador">DUI o pasaporte *</label>
-          <input
-            id="identificador"
-            name="identificador"
-            value="${escapar(d.identificador || '')}"
-            placeholder="01234567-8"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="telefono">Teléfono *</label>
-          <input
-            id="telefono"
-            name="telefono"
-            type="tel"
-            value="${escapar(d.telefono || '')}"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="correo">Correo electrónico</label>
-          <input
-            id="correo"
-            name="correo"
-            type="email"
-            value="${escapar(d.correo || '')}"
-          >
-        </div>
-
-        <div class="field">
-          <label for="departamento">Departamento *</label>
-          <select
-            id="departamento"
-            name="departamento"
-            required
-          >
-            <option value="">Seleccione...</option>
-
-            ${departamentos.map((departamento) => `
-              <option
-                ${d.departamento === departamento ? 'selected' : ''}
-              >${departamento}</option>
-            `).join('')}
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="municipio">Municipio *</label>
-          <input
-            id="municipio"
-            name="municipio"
-            value="${escapar(d.municipio || '')}"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="direccion">Dirección de residencia *</label>
-          <input
-            id="direccion"
-            name="direccion"
-            value="${escapar(d.direccion || '')}"
-            required
-          >
-        </div>
-
-      </div>
-
-      <div class="actions">
-        <button class="btn-primario" type="submit">
-          ${d.id ? 'Guardar actualización' : 'Registrar beneficiario'}
-        </button>
-
-        <button
-          class="btn"
-          id="limpiarBeneficiario"
-          type="button"
-        >
-          Limpiar formulario
-        </button>
-      </div>
-    </form>
-  `;
-}
-
-// Obtiene los valores ingresados en un formulario.
-function valoresFormulario(form) {
-  return Object.fromEntries(new FormData(form).entries());
+    await cargarBeneficiarios();
 }
 
 // Registra un beneficiario o actualiza uno existente.
 async function guardarBeneficiario(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const datos = valoresFormulario(e.currentTarget);
+    const datos = valoresFormulario(e.currentTarget);
 
-  try {
-    const r = await api(
-      beneficiarioEditando
-        ? `/api/beneficiarios/${beneficiarioEditando}`
-        : '/api/beneficiarios',
-      {
-        method: beneficiarioEditando ? 'PUT' : 'POST',
-        body: JSON.stringify(datos)
-      }
-    );
+    try {
+        const r = await api(
+            beneficiarioEditando
+                ? `/api/beneficiarios/${beneficiarioEditando}`
+                : '/api/beneficiarios',
+            {
+                method: beneficiarioEditando ? 'PUT' : 'POST',
+                body: JSON.stringify(datos)
+            }
+        );
 
-    mostrarMensajeVista(r.mensaje, 'exito');
-    beneficiarioEditando = null;
+        mostrarMensajeVista(r.mensaje, 'exito');
+        beneficiarioEditando = null;
 
-    await vistaBeneficiarios();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await vistaBeneficiarios();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Consulta y muestra los beneficiarios registrados.
 async function cargarBeneficiarios() {
-  try {
-    const r = await api('/api/beneficiarios');
-    const cont = $('#tablaBeneficiarios');
+    try {
+        const r = await api('/api/beneficiarios');
+        const cont = $('#tablaBeneficiarios');
 
-    if (!r.datos.length) {
-      cont.innerHTML = `
+        if (!r.datos.length) {
+            cont.innerHTML = `
         <p class="estado-vacio">
           Todavía no hay beneficiarios registrados.
         </p>
       `;
-      return;
-    }
+            return;
+        }
 
-    cont.innerHTML = `
+        cont.innerHTML = `
       <h3>Beneficiarios registrados</h3>
 
       <table>
@@ -398,7 +286,6 @@ async function cargarBeneficiarios() {
           <tr>
             <th>Nombre</th>
             <th>DUI/Pasaporte</th>
-            <th>Teléfono</th>
             <th>Ubicación</th>
             <th>Acciones</th>
           </tr>
@@ -411,534 +298,253 @@ async function cargarBeneficiarios() {
                 ${escapar(b.nombre)} ${escapar(b.apellido)}
               </td>
 
-              <td>${escapar(b.identificador)}</td>
-              <td>${escapar(b.telefono)}</td>
+              <td>${escapar(b.documento_unico)}</td>
 
               <td>
-                ${escapar(b.municipio)}, ${escapar(b.departamento)}
+                ${getCatalogoName(catalogos.municipios,b.municipio_id)}
               </td>
 
               <td>
-                <button
-                  class="btn"
-                  data-editar-beneficiario="${b.id}"
-                >
-                  Editar
-                </button>
-              </td>
+                ${usuarioActual.rol != "beneficiario" ? addEditarButton("beneficiario", b.id) : ""}
             </tr>
           `).join('')}
         </tbody>
       </table>
     `;
-
-    // Asigna la acción de editar a cada botón.
-    cont.querySelectorAll('[data-editar-beneficiario]')
-      .forEach((boton) => {
-        boton.addEventListener('click', () => {
-          editarBeneficiario(
-            Number(boton.dataset.editarBeneficiario)
-          );
-        });
-      });
-
-    // Permite limpiar el formulario.
-    $('#limpiarBeneficiario').addEventListener('click', () => {
-      $('#formBeneficiario').reset();
-    });
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        // Asigna la acción de editar a cada botón.
+        cont.querySelectorAll('[data-editar-beneficiario]')
+            .forEach((boton) => {
+                boton.addEventListener('click', () => {
+                    window.open(
+                        `/dashboards/beneficiario.html?id=${encodeURIComponent(boton.dataset.editarBeneficiario)}`,
+                        '_blank'
+                    );
+                });
+            });
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
-
-// Busca un beneficiario y carga sus datos para editarlos.
-async function editarBeneficiario(id) {
-  try {
-    const r = await api('/api/beneficiarios');
-    const d = r.datos.find((elemento) => elemento.id === id);
-
-    if (!d) return;
-
-    beneficiarioEditando = id;
-
-    vista.innerHTML = `
-      <h2>Actualizar beneficiario</h2>
-
-      <p>HU05 · Modifique los campos necesarios.</p>
-
-      ${formBeneficiario(d)}
-
-      <div
-        class="tabla-contenedor"
-        id="tablaBeneficiarios"
-      ></div>
-    `;
-
-    $('#formBeneficiario').addEventListener(
-      'submit',
-      guardarBeneficiario
-    );
-
-    $('#limpiarBeneficiario').addEventListener(
-      'click',
-      () => vistaBeneficiarios()
-    );
-
-    await cargarBeneficiarios();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
-}
-
 
 // Muestra el formulario y la tabla de programas.
 async function vistaProgramas() {
-  programaEditando = null;
+    programaEditando = null;
 
-  vista.innerHTML = `
-    <h2>Gestión de programas de subsidios</h2>
-
-    <p>
-      HU06, HU07 y HU08 · Cree y administre los programas de ayuda.
-    </p>
-
-    ${formPrograma()}
+    vista.innerHTML = `
+    ${usuarioActual.rol == "admin" ? `    <h2>Gestión de programas de subsidios</h2>` : ``}
+    ${usuarioActual.rol == "admin" ? formPrograma() : ""}
 
     <div class="tabla-contenedor" id="tablaProgramas"></div>
   `;
 
-  $('#formPrograma').addEventListener('submit', guardarPrograma);
+    $('#formPrograma')?.addEventListener('submit', guardarPrograma);
 
-  $('#cancelarPrograma').addEventListener('click', () => {
-    programaEditando = null;
-    vistaProgramas();
-  });
+    $('#cancelarPrograma')?.addEventListener('click', () => {
+        programaEditando = null;
+        vistaProgramas();
+    });
 
-  await cargarProgramas();
-}
-
-// Construye el formulario de creación o edición de programas.
-function formPrograma(d = {}) {
-  const entidades = [
-    ['raiz', 'Raíz Cooperativa · EMP-02'],
-    ['mag', 'Ministerio de Agricultura y Ganadería (MAG)'],
-    ['integracion', 'Dirección de Integración'],
-    ['fundasal', 'FUNDASAL'],
-    ['fusal', 'FUSAL']
-  ];
-
-  const tipos = [
-    'Insumos agrícolas',
-    'Becas',
-    'Apoyo para vivienda',
-    'Recursos humanitarios',
-    'Apoyo económico',
-    'Vales de transporte',
-    'Canasta básica'
-  ];
-
-  const estados = [
-    'Activo',
-    'En revisión',
-    'Suspendido',
-    'Cerrado'
-  ];
-
-  const unidades = [
-    'Paquete / kit',
-    'Unidad',
-    'Saco',
-    'Litro',
-    'Libras',
-    'Metros'
-  ];
-
-  const periodicidades = [
-    'Una vez por campaña',
-    'Mensual',
-    'Trimestral',
-    'Anual'
-  ];
-
-  return `
-    <form id="formPrograma">
-
-      <header class="form-header">
-        <div>
-          <h3>${d.id ? 'EDITAR PROGRAMA' : 'NUEVO BENEFICIO'}</h3>
-
-          <p class="subtitle">
-            ${d.claveCorrelativa
-              ? escapar(d.claveCorrelativa)
-              : 'Clave correlativa generada al guardar'}
-          </p>
-        </div>
-
-        <span class="status">
-          ${escapar(d.estado || 'En revisión')}
-        </span>
-      </header>
-
-      <div class="form-grid">
-
-        ${campo(
-          'Nombre del programa',
-          'nombre',
-          d.nombre,
-          'text',
-          'Ej. Cosecha Activa'
-        )}
-
-        <div class="field">
-          <label for="entidad">Entidad responsable *</label>
-
-          <select id="entidad" name="entidad" required>
-            ${opciones(entidades, d.entidad)}
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="tipo">Tipo de beneficio *</label>
-
-          <select id="tipo" name="tipo" required>
-            ${opciones(tipos.map((x) => [x, x]), d.tipo)}
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="estado">Estado *</label>
-
-          <select id="estado" name="estado" required>
-            ${opciones(
-              estados.map((x) => [x, x]),
-              d.estado || 'Activo'
-            )}
-          </select>
-        </div>
-
-        <div class="field full">
-          <label for="descripcion">Descripción del beneficio *</label>
-
-          <textarea
-            id="descripcion"
-            name="descripcion"
-            required
-            placeholder="Describa el beneficio"
-          >${escapar(d.descripcion || '')}</textarea>
-        </div>
-
-        ${campo(
-          'Cantidad por asignación',
-          'cantidad',
-          d.cantidad,
-          'number',
-          'Cantidad',
-          'min="1"'
-        )}
-
-        <div class="field">
-          <label for="unidad">Unidad de entrega *</label>
-
-          <select id="unidad" name="unidad" required>
-            ${opciones(unidades.map((x) => [x, x]), d.unidad)}
-          </select>
-        </div>
-
-        ${campo(
-          'Cupos del período',
-          'cupos',
-          d.cupos,
-          'number',
-          '250',
-          'min="1"'
-        )}
-
-        ${campo(
-          'Monto por asignación (USD)',
-          'monto',
-          d.monto ?? 0,
-          'number',
-          '0',
-          'min="0" step="0.01"'
-        )}
-
-        ${campo(
-          'Clave correlativa',
-          'claveCorrelativa',
-          d.claveCorrelativa,
-          'text',
-          'Se genera automáticamente',
-          'readonly'
-        )}
-
-        <div class="field full">
-          <label for="composicion">Composición del paquete *</label>
-
-          <textarea
-            id="composicion"
-            name="composicion"
-            required
-            placeholder="Describa el contenido del beneficio"
-          >${escapar(d.composicion || '')}</textarea>
-        </div>
-
-      </div>
-
-      <section class="section">
-        <h3>Período y cobertura</h3>
-
-        <div class="form-grid">
-
-          ${campo('Fecha de inicio', 'fechaInicio', d.fechaInicio, 'date')}
-
-          ${campo('Fecha de cierre', 'fechaCierre', d.fechaCierre, 'date')}
-
-          ${campo(
-            'Período de asignación',
-            'periodo',
-            d.periodo,
-            'text',
-            'Ej. Campaña 2026'
-          )}
-
-          <div class="field">
-            <label for="periodicidad">Periodicidad *</label>
-
-            <select id="periodicidad" name="periodicidad" required>
-              ${opciones(
-                periodicidades.map((x) => [x, x]),
-                d.periodicidad
-              )}
-            </select>
-          </div>
-
-          <div class="field full">
-            <label for="zonas">Zonas habilitadas *</label>
-
-            <select id="zonas" name="zonas" required>
-              ${opciones(
-                departamentos.map((x) => [x, x]),
-                d.zonas
-              )}
-            </select>
-          </div>
-
-        </div>
-      </section>
-
-      <section class="section">
-        <h3>Criterios de elegibilidad</h3>
-
-        ${
-          [
-            ['unidad', 'Unidad productiva registrada y validada'],
-            ['residencia', 'Residencia o actividad en una zona habilitada'],
-            ['declaracion', 'Declaración de pequeña producción documentada'],
-            ['consentimiento', 'Consentimiento para tratamiento de datos vigente']
-          ].map(([valor, texto]) => `
-            <label class="check">
-              <input
-                type="checkbox"
-                name="criterios"
-                value="${valor}"
-                ${
-                  (d.criterios || [
-                    'unidad',
-                    'residencia',
-                    'declaracion',
-                    'consentimiento'
-                  ]).includes(valor)
-                    ? 'checked'
-                    : ''
-                }
-              >
-
-              <span>${texto}</span>
-            </label>
-          `).join('')
-        }
-
-        <div class="field">
-          <label for="documentos">Documentos requeridos *</label>
-
-          <textarea
-            id="documentos"
-            name="documentos"
-            required
-            placeholder="Documentos necesarios"
-          >${escapar(d.documentos || '')}</textarea>
-        </div>
-      </section>
-
-      <p class="notice">
-        Control de duplicados: los registros se mantienen únicamente
-        durante esta ejecución del servidor. La persistencia se
-        desarrollará en el Sprint 2.
-      </p>
-
-      <div class="actions">
-        <button type="submit" class="btn-primario">
-          ${d.id ? 'Guardar cambios' : 'Crear programa'}
-        </button>
-
-        <button type="button" class="btn" id="cancelarPrograma">
-          Cancelar
-        </button>
-      </div>
-
-    </form>
-  `;
-}
-
-// Genera un campo de formulario reutilizable.
-function campo(
-  label,
-  name,
-  value = '',
-  type = 'text',
-  placeholder = '',
-  extra = ''
-) {
-  return `
-    <div class="field">
-      <label for="${name}">${label} *</label>
-
-      <input
-        id="${name}"
-        name="${name}"
-        type="${type}"
-        value="${escapar(value ?? '')}"
-        ${placeholder ? `placeholder="${escapar(placeholder)}"` : ''}
-        ${extra}
-        ${extra.includes('readonly') ? '' : 'required'}
-      >
-    </div>
-  `;
-}
-
-// Genera las opciones de un elemento select.
-function opciones(lista, seleccionado = '') {
-  return `
-    <option value="">Seleccione...</option>
-
-    ${lista.map(([valor, texto]) => `
-      <option
-        value="${escapar(valor)}"
-        ${seleccionado === valor ? 'selected' : ''}
-      >${escapar(texto)}</option>
-    `).join('')}
-  `;
+    await cargarProgramas();
 }
 
 // Registra un programa nuevo o actualiza uno existente.
 async function guardarPrograma(e) {
-  e.preventDefault();
+    e.preventDefault();
 
-  const formulario = e.currentTarget;
-  const datos = valoresFormulario(formulario);
+    const formulario = e.currentTarget;
+    const datos = valoresPrograma(formulario);
 
-  // Obtiene únicamente los criterios que están marcados.
-  datos.criterios = [
-    ...formulario.querySelectorAll('input[name="criterios"]:checked')
-  ].map((elemento) => elemento.value);
+    // Obtiene únicamente los criterios que están marcados.
+    datos.criterios = [
+        ...formulario.querySelectorAll('input[name="criterios"]:checked')
+    ].map((elemento) => elemento.value);
+    datos.zonas = [...formulario.querySelectorAll('input[name="zonas"]:checked')].map((el) => el.value);
 
-  try {
-    const r = await api(
-      programaEditando
-        ? `/api/programas/${programaEditando}`
-        : '/api/programas',
-      {
-        method: programaEditando ? 'PUT' : 'POST',
-        body: JSON.stringify(datos)
-      }
-    );
+    try {
+        const r = await api(
+            programaEditando
+                ? `/api/programas/${programaEditando}`
+                : '/api/programas',
+            {
+                method: programaEditando ? 'PUT' : 'POST',
+                body: JSON.stringify(datos)
+            }
+        );
 
-    mostrarMensajeVista(r.mensaje, 'exito');
-    programaEditando = null;
+        mostrarMensajeVista(r.mensaje, 'exito');
+        programaEditando = null;
 
-    await vistaProgramas();
-  } catch (err) {
-    mostrarMensajeVista(err.message);
-  }
+        await vistaProgramas();
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
 }
 
 // Consulta y muestra todos los programas registrados.
 async function cargarProgramas() {
-  try {
-    const r = await api('/api/programas');
-    const cont = $('#tablaProgramas');
+    try {
+        const r = await api('/api/programas');
+        const cont = $('#tablaProgramas');
 
-    if (!r.datos.length) {
-      cont.innerHTML = `
+        if (!r.datos.length) {
+            cont.innerHTML = `
         <p class="estado-vacio">
           Todavía no hay programas creados.
         </p>
       `;
-      return;
-    }
+            return;
+        }
 
-    cont.innerHTML = `
+        cont.innerHTML = `
       <h3>Programas registrados</h3>
 
+        <table>
+        <thead>
+            <tr>
+            <th>Entidad</th>
+            <th>Programa</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            ${r.datos.map((p) => `
+            <tr>
+                <td>${getCatalogoName(catalogos.entidades,p.entidad)}</td>
+                <td>
+                ${escapar(p.nombre)}
+                <br>
+                <small>${escapar(p.claveCorrelativa)}</small>
+                </td>
+                <td>${getCatalogoName(catalogos.tipos,p.tipo)}</td>
+                <td>${getCatalogoName(catalogos.estados,p.estado)}</td>
+                <td>
+                <div class="acciones-fila">
+                    ${addEditarButton("programa", p.id)}
+                </div>
+                </td>
+            </tr>
+            `).join('')}
+        </tbody>
+        </table>
+    `;
+        cont.querySelectorAll('[data-editar-programa]')
+            .forEach((boton) => {
+                boton.addEventListener('click', () => {
+                    window.open(
+                        `/dashboards/programa.html?id=${encodeURIComponent(boton.dataset.editarPrograma)}`,
+                        '_blank'
+                    );
+                });
+            });
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+}
+
+// Muestra el buscador con filtros y la lista de asignaciones (solicitudes de inscripción).
+async function vistaAsignaciones() {
+    const filtro = (id, etiqueta, control, activo) => `
+      <div class="filtro">
+        <label for="${id}">${etiqueta}</label>
+        ${control}
+        <label><input type="checkbox" id="chk_${id}" ${activo ? 'checked' : ''}> Considerar</label>
+      </div>`;
+    const select = (id, lista, valor = '') =>
+        `<select id="${id}">` +
+        lista.map((x) => `<option value="${escapar(x.id)}" ${String(x.id) === String(valor) ? 'selected' : ''}>${escapar(x.name)}</option>`).join('') +
+        `</select>`;
+
+    let programas = [];
+    try {
+        programas = (await api('/api/programas')).datos;
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+
+    vista.innerHTML = `
+    <h2>Asignaciones</h2>
+    <form id="formAsignaciones" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      ${filtro('fEntidad', 'Entidad responsable', select('fEntidad', catalogos.entidades), false)}
+      ${filtro('fPrograma', 'Programa', select('fPrograma', programas.map((p) => ({ id: p.id, name: p.nombre }))), false)}
+      ${filtro('fBeneficiario', 'Beneficiario (documento)', `<input id="fBeneficiario" type="text">`, false)}
+      ${filtro('fEstado', 'Estado', select('fEstado', catalogos.estados_inscripciones, 1), true)}
+      <button class="btn" type="submit">Buscar</button>
+    </form>
+    <div class="tabla-contenedor" id="tablaAsignaciones"></div>`;
+
+    // Cada control se activa o inactiva según su checkbox.
+    ['fEntidad', 'fPrograma', 'fBeneficiario', 'fEstado'].forEach((id) => {
+        const chk = $(`#chk_${id}`);
+        const ctl = $(`#${id}`);
+        ctl.disabled = !chk.checked;
+        chk.addEventListener('change', () => { ctl.disabled = !chk.checked; });
+    });
+
+    $('#formAsignaciones').addEventListener('submit', (e) => {
+        e.preventDefault();
+        cargarAsignaciones();
+    });
+
+    await cargarAsignaciones();
+}
+
+// Consulta las inscripciones y aplica los filtros activos.
+async function cargarAsignaciones() {
+    const cont = $('#tablaAsignaciones');
+    const activo = (id) => ($(`#chk_${id}`).checked ? $(`#${id}`).value.trim() : null);
+    const fEnt = activo('fEntidad');
+    const fProg = activo('fPrograma');
+    const fDoc = activo('fBeneficiario');
+    const fEst = activo('fEstado');
+
+    try {
+        const r = await api('/api/inscripciones');
+        const datos = r.datos.filter((i) =>
+            (!fEnt || String(i.entidad) === fEnt) &&
+            (!fProg || String(i.programa_id) === fProg) &&
+            (!fDoc || String(i.documento_unico).toLowerCase().includes(fDoc.toLowerCase())) &&
+            (!fEst || String(i.estado) === fEst));
+
+        if (!datos.length) {
+            cont.innerHTML = `<p class="estado-vacio">No hay asignaciones que coincidan.</p>`;
+            return;
+        }
+
+        cont.innerHTML = `
       <table>
         <thead>
           <tr>
+            <th>Entidad responsable</th>
             <th>Programa</th>
-            <th>Entidad</th>
-            <th>Tipo</th>
-            <th>Fechas</th>
+            <th>Beneficiario</th>
             <th>Estado</th>
             <th>Acciones</th>
           </tr>
         </thead>
-
         <tbody>
-          ${r.datos.map((p) => `
+          ${datos.map((i) => `
             <tr>
-              <td>
-                ${escapar(p.nombre)}
-                <br>
-                <small>${escapar(p.claveCorrelativa)}</small>
-              </td>
-
-              <td>${escapar(p.entidad)}</td>
-              <td>${escapar(p.tipo)}</td>
-
-              <td>
-                ${escapar(p.fechaInicio)} – ${escapar(p.fechaCierre)}
-              </td>
-
-              <td>${escapar(p.estado)}</td>
-
-              <td>
-                <div class="acciones-fila">
-                  <button
-                    class="btn"
-                    data-editar-programa="${p.id}"
-                  >
-                    Editar
-                  </button>
-
-                  <button
-                    class="btn"
-                    data-eliminar-programa="${p.id}"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `).join('')}
+              <td>${escapar(getCatalogoName(catalogos.entidades, i.entidad) ?? '')}</td>
+              <td>${escapar(i.programa_nombre)}</td>
+              <td>${escapar(i.documento_unico)}</td>
+              <td>${escapar(getCatalogoName(catalogos.estados_inscripciones, i.estado) ?? i.estado)}</td>
+              <td><button class="btn" data-programa="${escapar(i.programa_id)}" data-cuenta="${escapar(i.beneficiario_id)}">Ver</button></td>
+            </tr>`).join('')}
         </tbody>
-      </table>
-    `;
+      </table>`;
 
-    // Asigna la acción de edición a cada programa.
-    cont.querySelectorAll('[data-editar-programa]')
-      .forEach((boton) => {
-        boton.addEventListener('click', () => {
-          editarPrograma(Number(boton.dataset.editarPrograma));
+        cont.querySelectorAll('[data-cuenta]').forEach((boton) => {
+            boton.addEventListener('click', () => {
+                window.open(
+                    `/asignacion.html?programa=${encodeURIComponent(boton.dataset.programa)}&cuenta=${encodeURIComponent(boton.dataset.cuenta)}`,
+                    '_blank'
+                );
+            });
         });
+<<<<<<< HEAD
       });
 
     // Asigna la acción de eliminación a cada programa.
@@ -1048,3 +654,9 @@ document.addEventListener('click', (e) => {
     }
 });
 
+=======
+    } catch (err) {
+        mostrarMensajeVista(err.message);
+    }
+}// bajo el ultimo querySelectorAll el codigo es igual a la funcion cargarProgramas asi que este comentario hacia que no se tomara como cambio en esa funcion
+>>>>>>> origin/develop
